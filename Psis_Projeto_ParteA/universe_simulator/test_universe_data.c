@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "config.h"
 #include "display.h"
+#include "universe-data.h"
 
 // Game state structure
 typedef struct {
@@ -10,6 +11,7 @@ typedef struct {
     bool paused;
     display_context *display;
     universe_config config;
+    universe_data *universe;
 } game_state;
 
 // Initialize game state
@@ -23,6 +25,7 @@ game_state* game_init(const char *config_file) {
     state->running = true;
     state->paused = false;
     state->display = NULL;
+    state->universe = NULL;
 
     // Load configuration
     if (load_config(config_file, &state->config) != 0) {
@@ -32,6 +35,14 @@ game_state* game_init(const char *config_file) {
     }
 
     print_config(&state->config);
+
+    // Create universe
+    state->universe = universe_create(&state->config);
+    if (!state->universe) {
+        fprintf(stderr, "Failed to create universe\n");
+        free(state);
+        return NULL;
+    }
 
     // Initialize display
     state->display = display_init("Space Trash - Universe Simulator", 
@@ -53,6 +64,10 @@ void game_destroy(game_state *state) {
 
     if (state->display) {
         display_destroy(state->display);
+    }
+
+    if (state->universe) {
+        universe_destroy(state->universe);
     }
 
     free(state);
