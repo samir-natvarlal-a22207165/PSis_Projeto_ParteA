@@ -89,3 +89,26 @@ void display_present(display_context *ctx) {
     if (!ctx || !ctx->renderer) return;
     SDL_RenderPresent(ctx->renderer);
 }
+
+void display_set_color(display_context *ctx, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    if (!ctx || !ctx->renderer) return;
+    SDL_SetRenderDrawColor(ctx->renderer, r, g, b, a);
+}
+
+void display_draw_circle(display_context *ctx, int cx, int cy, int radius) {
+    if (!ctx || !ctx->renderer) return;
+
+    // Midpoint circle algorithm for filled circle
+    for (int y = -radius; y <= radius; y++) {
+        for (int x = -radius; x <= radius; x++) {
+            if (x*x + y*y <= radius*radius) {
+                SDL_RenderDrawPoint(ctx->renderer, cx + x, cy + y);
+            }
+        }
+    }
+}
+
+void display_draw_point(display_context *ctx, int x, int y) {
+    if (!ctx || !ctx->renderer) return;
+    SDL_RenderDrawPoint(ctx->renderer, x, y);
+}

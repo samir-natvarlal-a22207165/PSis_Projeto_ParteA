@@ -25,4 +25,13 @@ void display_clear(display_context *ctx);
 // Present/update the screen
 void display_present(display_context *ctx);
 
+// Set draw color (for drawing shapes)
+void display_set_color(display_context *ctx, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+
+// Draw a filled circle
+void display_draw_circle(display_context *ctx, int x, int y, int radius);
+
+// Draw a point/pixel
+void display_draw_point(display_context *ctx, int x, int y);
+
 #endif // DISPLAY_H
