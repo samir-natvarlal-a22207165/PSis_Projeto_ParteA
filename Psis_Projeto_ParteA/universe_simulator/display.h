@@ -2,12 +2,15 @@
 #define DISPLAY_H
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include "config.h"
+#include <stdbool.h>
 
 // Display context structure
 typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
+    TTF_Font *font;
     int width;
     int height;
 } display_context;
@@ -33,5 +36,18 @@ void display_draw_circle(display_context *ctx, int x, int y, int radius);
 
 // Draw a point/pixel
 void display_draw_point(display_context *ctx, int x, int y);
+
+// Draw text at position
+void display_draw_text(display_context *ctx, const char *text, int x, int y, 
+                       Uint8 r, Uint8 g, Uint8 b);
+
+// ===== Game Object Drawing Functions =====
+
+// Draw a planet at position
+void display_draw_planet(display_context *ctx, float x, float y, char name, 
+                        int index, bool is_recycling);
+
+// Draw trash at position
+void display_draw_trash(display_context *ctx, float x, float y);
 
 #endif // DISPLAY_H

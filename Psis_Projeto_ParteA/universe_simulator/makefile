@@ -12,7 +12,7 @@ CFLAGS = -Wall -Wextra -g -O2
 
 # Libraries
 LIBS_CONFIG = -lconfig
-LIBS_SDL = -lSDL2
+LIBS_SDL = -lSDL2 -lSDL2_ttf
 
 # Detect platform and adjust library paths
 ifeq ($(UNAME_S),Darwin)

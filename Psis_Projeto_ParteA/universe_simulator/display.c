@@ -1,6 +1,7 @@
 #include "display.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 display_context* display_init(const char *title, int width, int height) {
     // Allocate display context
@@ -14,6 +15,7 @@ display_context* display_init(const char *title, int width, int height) {
     ctx->height = height;
     ctx->window = NULL;
     ctx->renderer = NULL;
+    ctx->font = NULL;
 
     // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -22,9 +24,17 @@ display_context* display_init(const char *title, int width, int height) {
         return NULL;
     }
 
-    // Create window
+    // Initialize SDL_ttf for text rendering
+    if (TTF_Init() < 0) {
+        fprintf(stderr, "SDL_ttf initialization failed: %s\n", TTF_GetError());
+        SDL_Quit();
+        free(ctx);
+        return NULL;
+    }
+
+    // Create window with title "GAME"
     ctx->window = SDL_CreateWindow(
-        title,
+        "GAME",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         width,
@@ -49,13 +59,36 @@ display_context* display_init(const char *title, int width, int height) {
     if (!ctx->renderer) {
         fprintf(stderr, "Renderer creation failed: %s\n", SDL_GetError());
         SDL_DestroyWindow(ctx->window);
+        TTF_Quit();
         SDL_Quit();
         free(ctx);
         return NULL;
     }
 
-    // Set renderer draw color to black (for clearing)
-    SDL_SetRenderDrawColor(ctx->renderer, 0, 0, 0, 255);
+    // Try to load a default font (try multiple common paths)
+    const char *font_paths[] = {
+        "/System/Library/Fonts/Helvetica.ttc",           // macOS
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", // Linux/WSL
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", // Linux alternative
+        "/Windows/Fonts/arial.ttf",                      // Windows (if mounted)
+        NULL
+    };
+
+    for (int i = 0; font_paths[i] != NULL; i++) {
+        ctx->font = TTF_OpenFont(font_paths[i], 14);
+        if (ctx->font) {
+            printf("Loaded font: %s\n", font_paths[i]);
+            break;
+        }
+    }
+
+    if (!ctx->font) {
+        fprintf(stderr, "Warning: Could not load any font: %s\n", TTF_GetError());
+        fprintf(stderr, "Text rendering will be disabled\n");
+    }
+
+    // Set renderer draw color to white (for background)
+    SDL_SetRenderDrawColor(ctx->renderer, 255, 255, 255, 255);
 
     printf("Display initialized: %dx%d\n", width, height);
     return ctx;
@@ -63,6 +96,10 @@ display_context* display_init(const char *title, int width, int height) {
 
 void display_destroy(display_context *ctx) {
     if (!ctx) return;
+
+    if (ctx->font) {
+        TTF_CloseFont(ctx->font);
+    }
 
     if (ctx->renderer) {
         SDL_DestroyRenderer(ctx->renderer);
@@ -72,6 +109,7 @@ void display_destroy(display_context *ctx) {
         SDL_DestroyWindow(ctx->window);
     }
 
+    TTF_Quit();
     SDL_Quit();
     free(ctx);
     printf("Display destroyed\n");
@@ -80,8 +118,8 @@ void display_destroy(display_context *ctx) {
 void display_clear(display_context *ctx) {
     if (!ctx || !ctx->renderer) return;
 
-    // Set color to black and clear
-    SDL_SetRenderDrawColor(ctx->renderer, 0, 0, 0, 255);
+    // Set color to white and clear (white background)
+    SDL_SetRenderDrawColor(ctx->renderer, 255, 255, 255, 255);
     SDL_RenderClear(ctx->renderer);
 }
 
@@ -111,4 +149,75 @@ void display_draw_circle(display_context *ctx, int cx, int cy, int radius) {
 void display_draw_point(display_context *ctx, int x, int y) {
     if (!ctx || !ctx->renderer) return;
     SDL_RenderDrawPoint(ctx->renderer, x, y);
+}
+
+void display_draw_text(display_context *ctx, const char *text, int x, int y,
+                       Uint8 r, Uint8 g, Uint8 b) {
+    if (!ctx || !ctx->renderer || !ctx->font || !text) return;
+
+    SDL_Color color = {r, g, b, 255};
+    SDL_Surface *surface = TTF_RenderText_Solid(ctx->font, text, color);
+    if (!surface) {
+        return;
+    }
+
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(ctx->renderer, surface);
+    if (!texture) {
+        SDL_FreeSurface(surface);
+        return;
+    }
+
+    SDL_Rect dest = {x, y, surface->w, surface->h};
+    SDL_RenderCopy(ctx->renderer, texture, NULL, &dest);
+
+    SDL_DestroyTexture(texture);
+    SDL_FreeSurface(surface);
+}
+
+// ===== Game Object Drawing Functions =====
+
+void display_draw_planet(display_context *ctx, float x, float y, char name, 
+                        int index, bool is_recycling) {
+    if (!ctx || !ctx->renderer) return;
+
+    int radius = 20; // PLANET_RADIUS from universe-data.h
+    int cx = (int)x;
+    int cy = (int)y;
+
+    // Set color based on recycling status
+    if (is_recycling) {
+        // Green for recycling planet
+        display_set_color(ctx, 0, 200, 0, 255);
+    } else {
+        // Blue-purple for normal planets (RGB: 100, 100, 200)
+        display_set_color(ctx, 100, 100, 200, 255);
+    }
+
+    // Draw filled circle
+    display_draw_circle(ctx, cx, cy, radius);
+
+    // Draw identifier text (e.g., "A0", "B0", etc.) at lower right
+    char label[4];
+    snprintf(label, sizeof(label), "%c%d", name, index);
+    
+    // Position text at lower right of planet
+    int text_x = cx + radius - 10;
+    int text_y = cy + radius - 10;
+    
+    // Draw text in black
+    display_draw_text(ctx, label, text_x, text_y, 0, 0, 0);
+}
+
+void display_draw_trash(display_context *ctx, float x, float y) {
+    if (!ctx || !ctx->renderer) return;
+
+    int trash_size = 3; // Small trash pieces
+    int cx = (int)x;
+    int cy = (int)y;
+
+    // Red color for trash
+    display_set_color(ctx, 255, 0, 0, 255);
+
+    // Draw small filled circle
+    display_draw_circle(ctx, cx, cy, trash_size);
 }

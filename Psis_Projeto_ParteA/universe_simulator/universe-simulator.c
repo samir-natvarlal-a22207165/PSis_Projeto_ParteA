@@ -132,13 +132,23 @@ void update_game(game_state *state) {
 
 // Render the universe
 void render_game(game_state *state) {
-    // Clear screen (black background)
+    // Clear screen (white background)
     display_clear(state->display);
 
-    // TODO: Draw universe elements (will be implemented in later steps)
-    // - Draw planets
-    // - Draw trash
-    // - Draw ships (in part 2)
+    // Draw planets
+    for (int i = 0; i < state->universe->num_planets; i++) {
+        planet_structure *planet = universe_get_planet(state->universe, i);
+        if (planet) {
+            display_draw_planet(state->display, 
+                              planet->x, 
+                              planet->y, 
+                              planet->name, 
+                              i,  // index for label
+                              planet->is_recycling);
+        }
+    }
+
+    // TODO: Draw trash (will be implemented in step 1i)
 
     // Present the frame
     display_present(state->display);
