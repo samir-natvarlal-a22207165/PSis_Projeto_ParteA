@@ -72,6 +72,9 @@ planet_structure* universe_get_planet(universe_data *universe, int index);
 // Set recycling planet (by index)
 void universe_set_recycling_planet(universe_data *universe, int index);
 
+// Initialize planets in the universe with automatic positioning
+void universe_initialize_planets(universe_data *universe);
+
 // ===== Trash Functions =====
 
 // Add trash to the universe at specified position with initial velocity
@@ -103,5 +106,8 @@ void correct_position(float *pos, int universe_size);
 
 // Calculate distance between two points
 float calculate_distance(float x1, float y1, float x2, float y2);
+
+// Print universe information (for debugging)
+void universe_print_info(universe_data *universe);
 
 #endif // UNIVERSE_DATA_H

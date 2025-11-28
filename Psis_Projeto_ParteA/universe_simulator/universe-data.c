@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <time.h>
 
 // ===== Universe Management =====
 
@@ -12,6 +13,9 @@ universe_data* universe_create(universe_config *config) {
         fprintf(stderr, "Failed to allocate universe\n");
         return NULL;
     }
+
+    // Initialize random seed (for planet positioning and trash generation)
+    srand(time(NULL));
 
     // Initialize basic properties
     universe->universe_width = config->universe_width;
@@ -118,6 +122,90 @@ void universe_set_recycling_planet(universe_data *universe, int index) {
            universe->planets[index].name);
 }
 
+void universe_initialize_planets(universe_data *universe) {
+    if (!universe) return;
+
+    printf("\nInitializing %d planets...\n", universe->max_planets);
+
+    // Strategy: distribute planets in a pattern to avoid collisions
+    // We'll use different strategies based on number of planets
+
+    if (universe->max_planets == 1) {
+        // Single planet in center
+        universe_add_planet(universe, 
+                          universe->universe_width / 2.0,
+                          universe->universe_height / 2.0,
+                          'A');
+    } 
+    else if (universe->max_planets == 2) {
+        // Two planets horizontally spaced
+        universe_add_planet(universe, 
+                          universe->universe_width * 0.33,
+                          universe->universe_height / 2.0,
+                          'A');
+        universe_add_planet(universe, 
+                          universe->universe_width * 0.67,
+                          universe->universe_height / 2.0,
+                          'B');
+    }
+    else if (universe->max_planets <= 5) {
+        // Arrange planets in a pentagon/circle pattern
+        float cx = universe->universe_width / 2.0;
+        float cy = universe->universe_height / 2.0;
+        float radius = fmin(universe->universe_width, universe->universe_height) * 0.35;
+        
+        for (int i = 0; i < universe->max_planets; i++) {
+            float angle = (2.0 * M_PI * i) / universe->max_planets - M_PI / 2.0; // Start from top
+            float x = cx + radius * cos(angle);
+            float y = cy + radius * sin(angle);
+            
+            universe_add_planet(universe, x, y, 'A' + i);
+        }
+    }
+    else {
+        // For more planets, use a grid-like distribution with some randomness
+        int cols = (int)ceil(sqrt(universe->max_planets));
+        int rows = (int)ceil((float)universe->max_planets / cols);
+        
+        float spacing_x = universe->universe_width / (cols + 1.0);
+        float spacing_y = universe->universe_height / (rows + 1.0);
+        
+        // Add some margin from edges
+        float margin_x = PLANET_RADIUS * 3;
+        float margin_y = PLANET_RADIUS * 3;
+        
+        for (int i = 0; i < universe->max_planets; i++) {
+            int row = i / cols;
+            int col = i % cols;
+            
+            float base_x = margin_x + spacing_x * (col + 1);
+            float base_y = margin_y + spacing_y * (row + 1);
+            
+            // Add small random offset to make it less uniform (±10% of spacing)
+            float offset_x = (rand() % 100 - 50) / 500.0 * spacing_x;
+            float offset_y = (rand() % 100 - 50) / 500.0 * spacing_y;
+            
+            float x = base_x + offset_x;
+            float y = base_y + offset_y;
+            
+            // Ensure planets stay within bounds
+            if (x < margin_x) x = margin_x;
+            if (x > universe->universe_width - margin_x) x = universe->universe_width - margin_x;
+            if (y < margin_y) y = margin_y;
+            if (y > universe->universe_height - margin_y) y = universe->universe_height - margin_y;
+            
+            universe_add_planet(universe, x, y, 'A' + i);
+        }
+    }
+
+    // Set first planet as recycling planet by default
+    if (universe->num_planets > 0) {
+        universe_set_recycling_planet(universe, 0);
+    }
+
+    printf("Planets initialized successfully!\n");
+}
+
 // ===== Trash Functions =====
 
 int universe_add_trash(universe_data *universe, float x, float y, 
@@ -218,4 +306,37 @@ float calculate_distance(float x1, float y1, float x2, float y2) {
     float dx = x2 - x1;
     float dy = y2 - y1;
     return sqrt(dx * dx + dy * dy);
+}
+
+void universe_print_info(universe_data *universe) {
+    if (!universe) {
+        printf("Universe is NULL\n");
+        return;
+    }
+
+    printf("\n=== Universe Information ===\n");
+    printf("Dimensions: %dx%d\n", universe->universe_width, universe->universe_height);
+    printf("Planets: %d/%d\n", universe->num_planets, universe->max_planets);
+    printf("Active trash: %d/%d\n", universe->num_trash, universe->max_trash);
+    printf("\nPlanets:\n");
+    
+    for (int i = 0; i < universe->num_planets; i++) {
+        planet_structure *p = &universe->planets[i];
+        printf("  [%d] Planet '%c': position=(%.1f, %.1f) mass=%.1f %s\n",
+               i, p->name, p->x, p->y, p->mass,
+               p->is_recycling ? "[RECYCLING]" : "");
+    }
+    
+    int active_trash = 0;
+    for (int i = 0; i < universe->max_trash; i++) {
+        if (universe->trash[i].active) {
+            active_trash++;
+        }
+    }
+    
+    if (active_trash > 0) {
+        printf("\nActive trash pieces: %d\n", active_trash);
+    }
+    
+    printf("===========================\n\n");
 }

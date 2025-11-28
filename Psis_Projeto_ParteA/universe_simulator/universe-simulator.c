@@ -44,6 +44,12 @@ game_state* game_init(const char *config_file) {
         return NULL;
     }
 
+    // Initialize planets in the universe
+    universe_initialize_planets(state->universe);
+
+    // Print universe info
+    universe_print_info(state->universe);
+
     // Initialize display
     state->display = display_init("Space Trash - Universe Simulator", 
                                   state->config.universe_width, 

@@ -1,210 +1,174 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include "config.h"
-#include "display.h"
 #include "universe-data.h"
+#include "config.h"
+#include <stdio.h>
+#include <math.h>
 
-// Game state structure
-typedef struct {
-    bool running;
-    bool paused;
-    display_context *display;
-    universe_config config;
-    universe_data *universe;
-} game_state;
-
-// Initialize game state
-game_state* game_init(const char *config_file) {
-    game_state *state = (game_state*)malloc(sizeof(game_state));
-    if (!state) {
-        fprintf(stderr, "Failed to allocate game state\n");
-        return NULL;
-    }
-
-    state->running = true;
-    state->paused = false;
-    state->display = NULL;
-    state->universe = NULL;
-
-    // Load configuration
-    if (load_config(config_file, &state->config) != 0) {
-        fprintf(stderr, "Failed to load configuration\n");
-        free(state);
-        return NULL;
-    }
-
-    print_config(&state->config);
-
-    // Create universe
-    state->universe = universe_create(&state->config);
-    if (!state->universe) {
-        fprintf(stderr, "Failed to create universe\n");
-        free(state);
-        return NULL;
-    }
-
-    // Initialize display
-    state->display = display_init("Space Trash - Universe Simulator", 
-                                  state->config.universe_width, 
-                                  state->config.universe_height);
+void test_vector_math() {
+    printf("\n=== Testing Vector Math ===\n");
     
-    if (!state->display) {
-        fprintf(stderr, "Failed to initialize display\n");
-        free(state);
-        return NULL;
-    }
-
-    return state;
+    // Test make_vector
+    vector v1 = make_vector(3.0, 4.0);
+    printf("Vector (3, 4): amplitude=%.2f, angle=%.2f radians (%.1f degrees)\n", 
+           v1.amplitude, v1.angle, v1.angle * 180.0 / M_PI);
+    
+    // Test add_vectors
+    vector v2 = make_vector(1.0, 0.0);
+    vector v3 = add_vectors(v1, v2);
+    printf("Vector (3,4) + (1,0): amplitude=%.2f, angle=%.2f radians\n", 
+           v3.amplitude, v3.angle);
 }
 
-// Clean up game state
-void game_destroy(game_state *state) {
-    if (!state) return;
-
-    if (state->display) {
-        display_destroy(state->display);
+void test_planets() {
+    printf("\n=== Testing Planets ===\n");
+    
+    universe_config config = {
+        .universe_width = 800,
+        .universe_height = 600,
+        .num_planets = 5,
+        .max_trash = 50,
+        .initial_trash = 10,
+        .ship_capacity = 10
+    };
+    
+    universe_data *universe = universe_create(&config);
+    if (!universe) {
+        printf("Failed to create universe\n");
+        return;
     }
-
-    if (state->universe) {
-        universe_destroy(state->universe);
+    
+    // Test manual planet addition
+    printf("\n--- Manual planet addition ---\n");
+    universe_add_planet(universe, 400, 300, 'X');
+    universe_add_planet(universe, 200, 150, 'Y');
+    universe_add_planet(universe, 600, 450, 'Z');
+    
+    // Set recycling planet
+    universe_set_recycling_planet(universe, 1);
+    
+    // Print planet info
+    printf("\nManually added planets:\n");
+    for (int i = 0; i < universe->num_planets; i++) {
+        planet_structure *p = universe_get_planet(universe, i);
+        printf("  Planet %c: (%.0f, %.0f) mass=%.1f recycling=%s\n",
+               p->name, p->x, p->y, p->mass, p->is_recycling ? "YES" : "NO");
     }
-
-    free(state);
+    
+    universe_destroy(universe);
 }
 
-// Handle SDL events
-void handle_events(game_state *state) {
-    SDL_Event event;
+void test_planet_initialization() {
+    printf("\n=== Testing Automatic Planet Initialization ===\n");
+    
+    // Test with different numbers of planets
+    int test_cases[] = {1, 2, 3, 5, 8, 12};
+    
+    for (int i = 0; i < 6; i++) {
+        int num_planets = test_cases[i];
+        printf("\n--- Testing with %d planets ---\n", num_planets);
+        
+        universe_config config = {
+            .universe_width = 800,
+            .universe_height = 600,
+            .num_planets = num_planets,
+            .max_trash = 50,
+            .initial_trash = 10,
+            .ship_capacity = 10
+        };
+        
+        universe_data *universe = universe_create(&config);
+        if (!universe) {
+            printf("Failed to create universe\n");
+            continue;
+        }
+        
+        // Initialize planets automatically
+        universe_initialize_planets(universe);
+        
+        // Print planet positions
+        printf("Planets in universe:\n");
+        for (int j = 0; j < universe->num_planets; j++) {
+            planet_structure *p = universe_get_planet(universe, j);
+            printf("  Planet %c: (%.0f, %.0f) recycling=%s\n",
+                   p->name, p->x, p->y, p->is_recycling ? "YES" : "NO");
+        }
+        
+        universe_destroy(universe);
+    }
+}
 
-    while (SDL_PollEvent(&event)) {
-        switch (event.type) {
-            case SDL_QUIT:
-                state->running = false;
-                printf("Quit event received\n");
-                break;
-
-            case SDL_KEYDOWN:
-                switch (event.key.keysym.sym) {
-                    case SDLK_ESCAPE:
-                        state->running = false;
-                        printf("ESC pressed - exiting\n");
-                        break;
-
-                    case SDLK_SPACE:
-                        state->paused = !state->paused;
-                        printf("Simulation %s\n", state->paused ? "PAUSED" : "RESUMED");
-                        break;
-
-                    case SDLK_q:
-                        state->running = false;
-                        printf("Q pressed - exiting\n");
-                        break;
-
-                    default:
-                        break;
-                }
-                break;
-
-            default:
-                break;
+void test_trash() {
+    printf("\n=== Testing Trash ===\n");
+    
+    universe_config config = {
+        .universe_width = 800,
+        .universe_height = 600,
+        .num_planets = 3,
+        .max_trash = 50,
+        .initial_trash = 10,
+        .ship_capacity = 10
+    };
+    
+    universe_data *universe = universe_create(&config);
+    if (!universe) {
+        printf("Failed to create universe\n");
+        return;
+    }
+    
+    // Add some trash
+    int t1 = universe_add_trash(universe, 100, 100, 5.0, 0.0);
+    int t2 = universe_add_trash(universe, 200, 200, 3.0, M_PI / 4);
+    int t3 = universe_add_trash(universe, 300, 300, 2.0, M_PI / 2);
+    
+    printf("Added %d trash pieces\n", universe_count_active_trash(universe));
+    
+    // Print trash info
+    printf("\nTrash information:\n");
+    for (int i = 0; i < universe->max_trash; i++) {
+        trash_structure *t = universe_get_trash(universe, i);
+        if (t) {
+            printf("  Trash %d: (%.0f, %.0f) velocity=%.1f angle=%.2f\n",
+                   i, t->x, t->y, t->velocity.amplitude, t->velocity.angle);
         }
     }
+    
+    // Remove one trash
+    printf("\nRemoving trash %d\n", t2);
+    universe_remove_trash(universe, t2);
+    printf("Active trash: %d\n", universe_count_active_trash(universe));
+    
+    universe_destroy(universe);
 }
 
-// Update game logic (physics, collisions, etc.)
-void update_game(game_state *state) {
-    if (state->paused) {
-        return; // Skip updates when paused
-    }
-
-    // TODO: Update physics (will be implemented in later steps)
-    // - Calculate gravitational forces
-    // - Update trash positions
-    // - Check collisions
+void test_utilities() {
+    printf("\n=== Testing Utilities ===\n");
+    
+    // Test distance calculation
+    float dist = calculate_distance(0, 0, 3, 4);
+    printf("Distance from (0,0) to (3,4): %.2f\n", dist);
+    
+    // Test position correction (wraparound)
+    float pos1 = -10.0;
+    correct_position(&pos1, 800);
+    printf("Position -10 corrected to: %.0f (in 800px universe)\n", pos1);
+    
+    float pos2 = 850.0;
+    correct_position(&pos2, 800);
+    printf("Position 850 corrected to: %.0f (in 800px universe)\n", pos2);
+    
+    float pos3 = 400.0;
+    correct_position(&pos3, 800);
+    printf("Position 400 stays at: %.0f (in 800px universe)\n", pos3);
 }
 
-// Render the universe
-void render_game(game_state *state) {
-    // Clear screen (black background)
-    display_clear(state->display);
-
-    // TODO: Draw universe elements (will be implemented in later steps)
-    // - Draw planets
-    // - Draw trash
-    // - Draw ships (in part 2)
-
-    // Present the frame
-    display_present(state->display);
-}
-
-// Main game loop
-void game_loop(game_state *state) {
-    Uint32 last_time = SDL_GetTicks();
-    Uint32 current_time;
-    Uint32 delta_time;
-    const Uint32 TARGET_DELTA = 10; // 10ms per frame (100 FPS)
-
-    printf("\n=== Universe Simulator Running ===\n");
-    printf("Controls:\n");
-    printf("  ESC or Q     - Quit\n");
-    printf("  SPACE        - Pause/Resume\n");
-    printf("  Close Window - Quit\n");
-    printf("==================================\n\n");
-
-    while (state->running) {
-        current_time = SDL_GetTicks();
-        delta_time = current_time - last_time;
-
-        // Handle input events
-        handle_events(state);
-
-        // Update game logic (only if enough time has passed)
-        if (delta_time >= TARGET_DELTA) {
-            update_game(state);
-            last_time = current_time;
-        }
-
-        // Render
-        render_game(state);
-
-        // Sleep to maintain frame rate and not consume 100% CPU
-        // If we processed frame too fast, sleep for remaining time
-        Uint32 frame_time = SDL_GetTicks() - current_time;
-        if (frame_time < TARGET_DELTA) {
-            SDL_Delay(TARGET_DELTA - frame_time);
-        }
-    }
-
-    printf("\n=== Universe Simulator Stopped ===\n");
-}
-
-int main(int argc, char *argv[]) {
-    const char *config_file = "universe.conf";
-
-    // Allow custom config file via command line
-    if (argc > 1) {
-        config_file = argv[1];
-    }
-
-    printf("=== Space Trash - Universe Simulator ===\n");
-    printf("Loading configuration from: %s\n\n", config_file);
-
-    // Initialize game
-    game_state *state = game_init(config_file);
-    if (!state) {
-        fprintf(stderr, "Failed to initialize game. Exiting.\n");
-        return 1;
-    }
-
-    printf("\nInitialization successful!\n");
-
-    // Run main game loop
-    game_loop(state);
-
-    // Cleanup
-    game_destroy(state);
-    printf("Universe simulator terminated cleanly.\n");
-
+int main() {
+    printf("=== Universe Data Structure Tests ===\n");
+    
+    test_vector_math();
+    test_planets();
+    test_planet_initialization();
+    test_trash();
+    test_utilities();
+    
+    printf("\n=== All tests completed ===\n");
     return 0;
 }
