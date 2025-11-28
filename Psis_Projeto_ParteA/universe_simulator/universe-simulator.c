@@ -4,6 +4,7 @@
 #include "config.h"
 #include "display.h"
 #include "universe-data.h"
+#include "physics-rules.h"
 
 // Game state structure
 typedef struct {
@@ -127,10 +128,10 @@ void update_game(game_state *state) {
         return; // Skip updates when paused
     }
 
-    // TODO: Update physics (will be implemented in later steps)
-    // - Calculate gravitational forces
-    // - Update trash positions
-    // - Check collisions
+    // Update physics (gravitational forces, velocity, position)
+    update_physics(state->universe);
+
+    // TODO: Check collisions with planets (will be implemented in step 1k)
 }
 
 // Render the universe
