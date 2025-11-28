@@ -114,15 +114,16 @@ void test_trash() {
         return;
     }
     
-    // Add some trash
+    // Test manual trash addition
+    printf("\n--- Manual trash addition ---\n");
     int t1 = universe_add_trash(universe, 100, 100, 5.0, 0.0);
     int t2 = universe_add_trash(universe, 200, 200, 3.0, M_PI / 4);
     int t3 = universe_add_trash(universe, 300, 300, 2.0, M_PI / 2);
     
-    printf("Added %d trash pieces\n", universe_count_active_trash(universe));
+    printf("Added %d trash pieces manually\n", universe_count_active_trash(universe));
     
     // Print trash info
-    printf("\nTrash information:\n");
+    printf("\nManually added trash:\n");
     for (int i = 0; i < universe->max_trash; i++) {
         trash_structure *t = universe_get_trash(universe, i);
         if (t) {
@@ -135,6 +136,42 @@ void test_trash() {
     printf("\nRemoving trash %d\n", t2);
     universe_remove_trash(universe, t2);
     printf("Active trash: %d\n", universe_count_active_trash(universe));
+    
+    universe_destroy(universe);
+}
+
+void test_trash_initialization() {
+    printf("\n=== Testing Automatic Trash Initialization ===\n");
+    
+    universe_config config = {
+        .universe_width = 800,
+        .universe_height = 600,
+        .num_planets = 5,
+        .max_trash = 50,
+        .initial_trash = 20,
+        .ship_capacity = 10
+    };
+    
+    universe_data *universe = universe_create(&config);
+    if (!universe) {
+        printf("Failed to create universe\n");
+        return;
+    }
+    
+    // Initialize trash automatically
+    universe_initialize_trash(universe, config.initial_trash);
+    
+    // Print first 10 trash pieces
+    printf("\nFirst 10 trash pieces:\n");
+    int count = 0;
+    for (int i = 0; i < universe->max_trash && count < 10; i++) {
+        trash_structure *t = universe_get_trash(universe, i);
+        if (t) {
+            printf("  Trash %d: (%.0f, %.0f) vel=%.2f angle=%.2f rad\n",
+                   i, t->x, t->y, t->velocity.amplitude, t->velocity.angle);
+            count++;
+        }
+    }
     
     universe_destroy(universe);
 }
@@ -167,6 +204,7 @@ int main() {
     test_planets();
     test_planet_initialization();
     test_trash();
+    test_trash_initialization();
     test_utilities();
     
     printf("\n=== All tests completed ===\n");

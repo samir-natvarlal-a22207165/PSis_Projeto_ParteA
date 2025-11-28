@@ -91,6 +91,9 @@ void universe_remove_trash(universe_data *universe, int index);
 // Count active trash
 int universe_count_active_trash(universe_data *universe);
 
+// Initialize trash in the universe with random positions and velocities
+void universe_initialize_trash(universe_data *universe, int num_trash);
+
 // ===== Vector Math Functions =====
 
 // Create a vector from x and y components

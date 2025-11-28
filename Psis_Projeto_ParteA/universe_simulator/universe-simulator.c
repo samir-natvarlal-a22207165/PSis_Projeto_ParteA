@@ -47,6 +47,9 @@ game_state* game_init(const char *config_file) {
     // Initialize planets in the universe
     universe_initialize_planets(state->universe);
 
+    // Initialize trash in the universe
+    universe_initialize_trash(state->universe, state->config.initial_trash);
+
     // Print universe info
     universe_print_info(state->universe);
 
@@ -143,12 +146,18 @@ void render_game(game_state *state) {
                               planet->x, 
                               planet->y, 
                               planet->name, 
-                              i,  // index for label
+                              i,  // index for label (A0-Z0, A1-Z1, etc.)
                               planet->is_recycling);
         }
     }
 
-    // TODO: Draw trash (will be implemented in step 1i)
+    // Draw trash
+    for (int i = 0; i < state->universe->max_trash; i++) {
+        trash_structure *trash = universe_get_trash(state->universe, i);
+        if (trash) {
+            display_draw_trash(state->display, trash->x, trash->y);
+        }
+    }
 
     // Present the frame
     display_present(state->display);

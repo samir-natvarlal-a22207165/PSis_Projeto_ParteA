@@ -1,7 +1,6 @@
 #include "display.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 display_context* display_init(const char *title, int width, int height) {
     // Allocate display context
@@ -196,9 +195,13 @@ void display_draw_planet(display_context *ctx, float x, float y, char name,
     // Draw filled circle
     display_draw_circle(ctx, cx, cy, radius);
 
-    // Draw identifier text (e.g., "A0", "B0", etc.) at lower right
+    // Draw identifier text with letter cycling (A0-Z0, then A1-Z1, etc.)
+    // Letter cycles through A-Z, number increments every 26 planets
+    char letter = 'A' + (index % 26);
+    int number = index / 26;
+    
     char label[4];
-    snprintf(label, sizeof(label), "%c%d", name, index);
+    snprintf(label, sizeof(label), "%c%d", letter, number);
     
     // Position text at lower right of planet
     int text_x = cx + radius - 10;

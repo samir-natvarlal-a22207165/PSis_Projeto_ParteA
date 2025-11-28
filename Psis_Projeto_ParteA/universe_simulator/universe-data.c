@@ -268,6 +268,40 @@ int universe_count_active_trash(universe_data *universe) {
     return universe->num_trash;
 }
 
+void universe_initialize_trash(universe_data *universe, int num_trash) {
+    if (!universe) return;
+
+    // Limit to max_trash
+    if (num_trash > universe->max_trash) {
+        num_trash = universe->max_trash;
+    }
+
+    printf("\nInitializing %d trash pieces...\n", num_trash);
+
+    for (int i = 0; i < num_trash; i++) {
+        // Random position in universe
+        float x = (float)(rand() % universe->universe_width);
+        float y = (float)(rand() % universe->universe_height);
+
+        // Random initial velocity (small values)
+        // Amplitude between 0.5 and 3.0 pixels per time unit
+        float velocity_amp = 0.5 + (rand() % 250) / 100.0;
+        
+        // Random angle (0 to 2π)
+        float velocity_angle = (rand() % 360) * M_PI / 180.0;
+
+        // Add trash to universe
+        int index = universe_add_trash(universe, x, y, velocity_amp, velocity_angle);
+        
+        if (index == -1) {
+            fprintf(stderr, "Warning: Could not add trash %d\n", i);
+            break;
+        }
+    }
+
+    printf("Trash initialized: %d active pieces\n", universe_count_active_trash(universe));
+}
+
 // ===== Vector Math Functions =====
 
 vector make_vector(float x, float y) {
