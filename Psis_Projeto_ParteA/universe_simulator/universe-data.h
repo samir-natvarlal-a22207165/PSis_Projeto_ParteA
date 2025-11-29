@@ -113,4 +113,7 @@ float calculate_distance(float x1, float y1, float x2, float y2);
 // Print universe information (for debugging)
 void universe_print_info(universe_data *universe);
 
+// Check if universe has collapsed (trash reached maximum)
+bool universe_has_collapsed(universe_data *universe);
+
 #endif // UNIVERSE_DATA_H

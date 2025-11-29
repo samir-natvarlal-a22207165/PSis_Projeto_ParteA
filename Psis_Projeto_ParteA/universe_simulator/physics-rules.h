@@ -18,4 +18,8 @@ void new_trash_position(universe_data *universe);
 // Update all physics (convenience function that calls all three above)
 void update_physics(universe_data *universe);
 
+// Check collisions between trash and planets
+// When trash hits planet center (distance < 1.0), new trash is generated
+void check_trash_planet_collisions(universe_data *universe);
+
 #endif // PHYSICS_RULES_H

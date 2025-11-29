@@ -11,6 +11,7 @@ typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
     TTF_Font *font;
+    TTF_Font *font_large;  // Large font for game over screen
     int width;
     int height;
 } display_context;
@@ -49,5 +50,8 @@ void display_draw_planet(display_context *ctx, float x, float y, char name,
 
 // Draw trash at position
 void display_draw_trash(display_context *ctx, float x, float y);
+
+// Draw game over screen (universe collapsed)
+void display_draw_game_over(display_context *ctx);
 
 #endif // DISPLAY_H

@@ -374,3 +374,10 @@ void universe_print_info(universe_data *universe) {
     
     printf("===========================\n\n");
 }
+
+bool universe_has_collapsed(universe_data *universe) {
+    if (!universe) return false;
+    
+    // Universe collapses when trash reaches maximum
+    return universe->num_trash >= universe->max_trash;
+}

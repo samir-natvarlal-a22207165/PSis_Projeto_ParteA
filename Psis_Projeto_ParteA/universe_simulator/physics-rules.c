@@ -1,6 +1,7 @@
 #include "physics-rules.h"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 void new_trash_acceleration(universe_data *universe) {
     if (!universe) return;
@@ -85,4 +86,51 @@ void update_physics(universe_data *universe) {
     new_trash_acceleration(universe);
     new_trash_velocity(universe);
     new_trash_position(universe);
+}
+
+void check_trash_planet_collisions(universe_data *universe) {
+    if (!universe) return;
+
+    // Check each active trash piece
+    for (int i = 0; i < universe->max_trash; i++) {
+        if (!universe->trash[i].active) continue;
+
+        // Check collision with each planet
+        for (int j = 0; j < universe->num_planets; j++) {
+            float distance = calculate_distance(
+                universe->trash[i].x,
+                universe->trash[i].y,
+                universe->planets[j].x,
+                universe->planets[j].y
+            );
+
+            // If trash touches planet center (distance < 1.0)
+            if (distance < 1.0) {
+                // Generate NEW trash at random position (original trash continues)
+                float new_x = (float)(rand() % universe->universe_width);
+                float new_y = (float)(rand() % universe->universe_height);
+                
+                // Random velocity (same range as initialization)
+                float velocity_amp = 0.5 + (rand() % 250) / 100.0;
+                float velocity_angle = (rand() % 360) * M_PI / 180.0;
+
+                // Add new trash (this increases total trash count)
+                int new_index = universe_add_trash(universe, new_x, new_y, 
+                                                   velocity_amp, velocity_angle);
+
+                if (new_index != -1) {
+                    printf("Trash hit planet '%c'! New trash spawned at (%.0f, %.0f) - Total: %d\n",
+                           universe->planets[j].name, new_x, new_y,
+                           universe_count_active_trash(universe));
+                } else {
+                    printf("Trash hit planet '%c'! Cannot spawn more trash (max reached: %d)\n",
+                           universe->planets[j].name, universe->max_trash);
+                }
+
+                // Original trash continues its path (don't remove it)
+                // Only check one collision per trash per frame
+                break;
+            }
+        }
+    }
 }

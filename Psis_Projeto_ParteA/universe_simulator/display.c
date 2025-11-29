@@ -1,6 +1,7 @@
 #include "display.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 display_context* display_init(const char *title, int width, int height) {
     // Allocate display context
@@ -15,6 +16,7 @@ display_context* display_init(const char *title, int width, int height) {
     ctx->window = NULL;
     ctx->renderer = NULL;
     ctx->font = NULL;
+    ctx->font_large = NULL;
 
     // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -86,6 +88,15 @@ display_context* display_init(const char *title, int width, int height) {
         fprintf(stderr, "Text rendering will be disabled\n");
     }
 
+    // Try to load a large font for game over screen (size 36)
+    for (int i = 0; font_paths[i] != NULL; i++) {
+        ctx->font_large = TTF_OpenFont(font_paths[i], 36);
+        if (ctx->font_large) {
+            printf("Loaded large font: %s (size 36)\n", font_paths[i]);
+            break;
+        }
+    }
+
     // Set renderer draw color to white (for background)
     SDL_SetRenderDrawColor(ctx->renderer, 255, 255, 255, 255);
 
@@ -95,6 +106,10 @@ display_context* display_init(const char *title, int width, int height) {
 
 void display_destroy(display_context *ctx) {
     if (!ctx) return;
+
+    if (ctx->font_large) {
+        TTF_CloseFont(ctx->font_large);
+    }
 
     if (ctx->font) {
         TTF_CloseFont(ctx->font);
@@ -223,4 +238,61 @@ void display_draw_trash(display_context *ctx, float x, float y) {
 
     // Draw small filled circle
     display_draw_circle(ctx, cx, cy, trash_size);
+}
+
+void display_draw_game_over(display_context *ctx) {
+    if (!ctx || !ctx->renderer) return;
+
+    // Fill entire screen with RED
+    SDL_SetRenderDrawColor(ctx->renderer, 255, 0, 0, 255);
+    SDL_RenderClear(ctx->renderer);
+
+    // Draw the doom message in the center
+    const char *message1 = "The Universe is full of trash!";
+    const char *message2 = "Humanity is doomed!";
+
+    // Use large font if available, otherwise use regular font
+    TTF_Font *font_to_use = ctx->font_large ? ctx->font_large : ctx->font;
+
+    if (font_to_use) {
+        SDL_Color black = {0, 0, 0, 255};
+        
+        // Render first line
+        SDL_Surface *surface1 = TTF_RenderText_Solid(font_to_use, message1, black);
+        if (surface1) {
+            SDL_Texture *texture1 = SDL_CreateTextureFromSurface(ctx->renderer, surface1);
+            if (texture1) {
+                // Center the text
+                SDL_Rect dest1 = {
+                    (ctx->width - surface1->w) / 2,
+                    (ctx->height / 2) - 40,
+                    surface1->w,
+                    surface1->h
+                };
+                SDL_RenderCopy(ctx->renderer, texture1, NULL, &dest1);
+                SDL_DestroyTexture(texture1);
+            }
+            SDL_FreeSurface(surface1);
+        }
+
+        // Render second line
+        SDL_Surface *surface2 = TTF_RenderText_Solid(font_to_use, message2, black);
+        if (surface2) {
+            SDL_Texture *texture2 = SDL_CreateTextureFromSurface(ctx->renderer, surface2);
+            if (texture2) {
+                // Center the text
+                SDL_Rect dest2 = {
+                    (ctx->width - surface2->w) / 2,
+                    (ctx->height / 2) + 10,
+                    surface2->w,
+                    surface2->h
+                };
+                SDL_RenderCopy(ctx->renderer, texture2, NULL, &dest2);
+                SDL_DestroyTexture(texture2);
+            }
+            SDL_FreeSurface(surface2);
+        }
+    }
+
+    SDL_RenderPresent(ctx->renderer);
 }

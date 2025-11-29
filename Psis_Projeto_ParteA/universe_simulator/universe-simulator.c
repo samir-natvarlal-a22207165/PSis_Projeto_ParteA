@@ -10,9 +10,11 @@
 typedef struct {
     bool running;
     bool paused;
+    bool game_over;       // Universe has collapsed
     display_context *display;
     universe_config config;
     universe_data *universe;
+    int collision_count;  // Track number of collisions
 } game_state;
 
 // Initialize game state
@@ -25,8 +27,10 @@ game_state* game_init(const char *config_file) {
 
     state->running = true;
     state->paused = false;
+    state->game_over = false;
     state->display = NULL;
     state->universe = NULL;
+    state->collision_count = 0;
 
     // Load configuration
     if (load_config(config_file, &state->config) != 0) {
@@ -102,8 +106,10 @@ void handle_events(game_state *state) {
                         break;
 
                     case SDLK_SPACE:
-                        state->paused = !state->paused;
-                        printf("Simulation %s\n", state->paused ? "PAUSED" : "RESUMED");
+                        if (!state->game_over) {
+                            state->paused = !state->paused;
+                            printf("Simulation %s\n", state->paused ? "PAUSED" : "RESUMED");
+                        }
                         break;
 
                     case SDLK_q:
@@ -124,18 +130,41 @@ void handle_events(game_state *state) {
 
 // Update game logic (physics, collisions, etc.)
 void update_game(game_state *state) {
-    if (state->paused) {
-        return; // Skip updates when paused
+    if (state->paused || state->game_over) {
+        return; // Skip updates when paused or game over
     }
 
     // Update physics (gravitational forces, velocity, position)
     update_physics(state->universe);
 
-    // TODO: Check collisions with planets (will be implemented in step 1k)
+    // Check collisions between trash and planets
+    // When trash hits planet center, NEW trash is spawned (original continues)
+    check_trash_planet_collisions(state->universe);
+
+    // Check if universe has collapsed
+    if (universe_has_collapsed(state->universe)) {
+        state->game_over = true;
+        printf("\n");
+        printf("═══════════════════════════════════════════\n");
+        printf("  THE UNIVERSE HAS COLLAPSED!\n");
+        printf("  Maximum trash reached: %d/%d\n", 
+               universe_count_active_trash(state->universe),
+               state->universe->max_trash);
+        printf("  Humanity is doomed!\n");
+        printf("═══════════════════════════════════════════\n");
+        printf("\nPress ESC or Q to exit.\n");
+    }
 }
 
 // Render the universe
 void render_game(game_state *state) {
+    // If game over, show red doom screen
+    if (state->game_over) {
+        display_draw_game_over(state->display);
+        return;
+    }
+
+    // Normal game rendering
     // Clear screen (white background)
     display_clear(state->display);
 
@@ -158,6 +187,17 @@ void render_game(game_state *state) {
         if (trash) {
             display_draw_trash(state->display, trash->x, trash->y);
         }
+    }
+
+    // Draw info overlay (top-left corner)
+    char info_text[64];
+    snprintf(info_text, sizeof(info_text), "Trash: %d/%d", 
+             universe_count_active_trash(state->universe),
+             state->universe->max_trash);
+    display_draw_text(state->display, info_text, 10, 10, 0, 0, 0);
+
+    if (state->paused) {
+        display_draw_text(state->display, "PAUSED", 10, 30, 255, 0, 0);
     }
 
     // Present the frame
