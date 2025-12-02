@@ -1,0 +1,29 @@
+// https://protobuf.dev/programming-guides/proto3/
+
+syntax = "proto2";
+
+message Position {
+  required sint32 x = 1;
+  required sint32 y = 2;
+}
+
+// Client connection request - sent when client wants to connect with a letter
+message connect_request {
+  required bytes letter = 1;  // The character/letter the client wants to use
+}
+
+// Client movement request - sent when client moves their letter
+message movement_request {
+  required bytes letter = 1;      // The character being moved
+  required Position position = 2; // X/Y position of the letter
+}
+
+// Unified server response - used for both connection and movement responses
+message server_response {
+  enum ResponseType {
+    CONNECT = 1;
+    MOVEMENT = 2;
+  }
+  required ResponseType type = 1;  // Type of response
+  required bool success = 2;       // true = OK/accepted, false = NOT OK/WALL
+}

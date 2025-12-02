@@ -1,14 +1,10 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-#include "comm-fifo.h"
+#include "zmq-comm.h"
 #include <ctype.h> 
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
-
-
-
-
 
 SDL_Renderer* render_window(SDL_Window* win){
 
