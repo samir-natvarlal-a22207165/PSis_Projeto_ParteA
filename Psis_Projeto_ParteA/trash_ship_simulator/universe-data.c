@@ -23,7 +23,7 @@ universe_data* universe_create(universe_config *config) {
     universe->max_planets = config->num_planets;
     universe->max_trash = config->max_trash;
     universe->max_ships = config->max_ships; 
-    universe->num_planets = config->max_ships;
+    universe->num_planets = 0;
     universe->num_trash = 0;
     universe->num_ships = 0;
     universe->recycling_planet_index = 0;
@@ -45,7 +45,7 @@ universe_data* universe_create(universe_config *config) {
         free(universe);
         return NULL;
     }
-    universe->ships = (ship_structure*)malloc(sizeof(ship_structure*) * config->max_ships);
+    universe->ships = (ship_structure*)malloc(sizeof(ship_structure) * config->max_ships);
     if (!universe->ships) {
         fprintf(stderr, "Failed to allocate ships array\n");
         free(universe->planets);
@@ -64,7 +64,7 @@ universe_data* universe_create(universe_config *config) {
         universe->ships[i].num_trash = 0;
     }
 
-    printf("Universe created: %dx%d, max %d planets, max %d trash\n, max %d ships",
+    printf("Universe created: %dx%d, max %d planets, max %d trash, max %d ships\n",
            universe->universe_width, universe->universe_height,
            universe->max_planets, universe->max_trash, universe->max_ships);
 
@@ -343,7 +343,7 @@ int universe_add_ship(universe_data *universe, float x, float y, char name){
     
 
 
-    universe->num_planets++;
+    universe->num_ships++;
 
     printf("Added ship '%c' at (%.1f, %.1f)\n", name, x, y);
 
@@ -375,7 +375,7 @@ void correct_position(float *pos, int universe_size) {
     }
 }
 
-void choose_position(universe_data *universe, int *x, int *y,
+void chose_position(universe_data *universe, float *x, float *y,
                      int radius, int universe_width, int universe_height)
 {
     bool valid = false;
@@ -419,7 +419,7 @@ void choose_position(universe_data *universe, int *x, int *y,
 
 
 
-void check_position_ship(universe_data *universe, int index, int *x, int *y,
+void check_colision_ship(universe_data *universe, int index, float *x, float *y,
                       int universe_width, int universe_height)
 {
     bool valid = false;
@@ -457,9 +457,9 @@ void check_position_ship(universe_data *universe, int index, int *x, int *y,
                 float x, y;
                 for (int i =0; i<ship->num_trash; i++){
                     trash_structure * trash_released = universe_get_trash(universe, i);
-                    choose_position(universe, &x, &y, trash_released->radius, 600, 800);//change
+                    chose_position(universe, &x, &y, trash_released->radius, 600, 800);//change
                     trash_released->x= x;
-                    trash_released->x= y;
+                    trash_released->y= y;
                     trash_released->active=true;
                 }   
                 if (ship->trash_indexs) {
@@ -479,10 +479,9 @@ void check_position_ship(universe_data *universe, int index, int *x, int *y,
                                     trash->x, trash->y, trash->radius)) {
 
             if(ship->num_trash < universe->ship_capacity){
-                ship->num_trash ++;
+                ship->num_trash++;
                 ship->trash_indexs = (int*)realloc(ship->trash_indexs, sizeof(int) * ship->num_trash);
                 ship->trash_indexs[ship->num_trash - 1] = i;
-                ship->num_trash ++;
                 trash->active = false;
             }
             break;; 
@@ -510,4 +509,9 @@ float calculate_distance(float x1, float y1, float x2, float y2) {
     float dx = x2 - x1;
     float dy = y2 - y1;
     return sqrt(dx * dx + dy * dy);
+}
+
+bool universe_has_collapsed(universe_data *universe) {
+    if (!universe) return false;
+    return universe->num_trash >= universe->max_trash;
 }

@@ -85,7 +85,7 @@ all: server client
 # ------------------------------------------------------------
 server: $(SERVER_OBJS) $(COMMON_OBJS)
 	$(CC) $(LDFLAGS) -o universe_server $^ \
-	    $(LIBS_CONFIG) $(LIBS_ZMQ) $(LIBS_PROTO) -lm
+	    $(LIBS_SDL) -lSDL2_ttf $(LIBS_CONFIG) $(LIBS_ZMQ) $(LIBS_PROTO) -lm
 	@echo "Built universe_server successfully for $(UNAME_S)"
 
 # ------------------------------------------------------------

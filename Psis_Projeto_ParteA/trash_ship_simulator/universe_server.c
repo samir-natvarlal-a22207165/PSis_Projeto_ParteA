@@ -67,13 +67,13 @@ game_state* game_init(const char *config_file) {
                                   state->config.universe_height);
 
     planet_structure *planets = state->universe->planets;
-    trash_structure *trash = state->universe->planets;
+    trash_structure *trash = state->universe->trash;
 
     //create planets at random locations
     float x, y;
     for (int i=0 ; i < state->config.num_planets; i++){
         chose_position(state->universe,&x, &y,planets[i].radius, state->config.universe_width, state->config.universe_height);
-        universe_add_planet(&state->universe, x, y, (char)i);
+        universe_add_planet(state->universe, x, y, (char)i);
     }
 
     universe_set_recycling_planet(state->universe, (int)0); 
@@ -81,7 +81,7 @@ game_state* game_init(const char *config_file) {
     ////create trash at random locations 
     for (int i=0 ; i < state->config.initial_trash; i++){
         chose_position(state->universe, &x, &y,trash[i].radius, state->config.universe_width, state->config.universe_height);
-        universe_add_trash(&state->universe, x, y, (float) 0,(float) 0);
+        universe_add_trash(state->universe, x, y, (float) 0,(float) 0);
     }
     
     if (!state->display) {
@@ -290,13 +290,14 @@ void game_loop(game_state *state) {
 
     void *fd = create_server_channel();
 
-    ship_structure * Ships = &state->universe->ships;
+    ship_structure * Ships = state->universe->ships;
 
     int n_chars = 0;
+    int ch_pos = -1;  // Declare at function scope
 
     int ch;
-    int pos_x;
-    int pos_y;
+    float pos_x = 0.0;
+    float pos_y = 0.0;
 
     char message_type[100];
     char c;
@@ -306,51 +307,9 @@ void game_loop(game_state *state) {
         current_time = SDL_GetTicks();
         delta_time = current_time - last_time;
 
-        // Handle input events of the server
-        handle_events(state);
-
-        // Handle input events of the client
-
-        read_message(fd, message_type, &c, &direction);
-
-        if (strcmp(message_type, "CONNECT") == 0) {
-
-            int ch_pos = find_ch_info(Ships, state->universe->num_ships, c);
-            ship_structure * ship = universe_get_ship(state->universe, ch_pos);
-            if (ch_pos == -1) {
-                send_response(fd, message_type, "OK");
-            } else {
-                send_response(fd, message_type, "NOT OK");
-                continue;
-            }
-            chose_position(state->universe, &pos_x, &pos_y, 
-                &state->universe->ships[ch_pos], state->config.universe_width, state->config.universe_width);
-            state->universe->num_ships++;
-            universe_add_ship(state->universe, pos_x, pos_y, c);
-
-        }
-        if (strcmp(message_type, "MOVE") == 0) {
-            int ch_pos = find_ch_info(Ships, state->universe->num_ships, c);
-            
-            if (ch_pos != -1) {
-                /* claculates new mark position */
-                ship_structure * ship = universe_get_ship(state->universe, ch_pos);
-                send_response(fd, message_type, "OK");
-                pos_x = ship->x;    
-                pos_y = ship->y;
-
-                update_position(state, &direction, &pos_x, &pos_y);
-
-                update_game(state, ch_pos, &pos_x, &pos_y);
-
-                }
-            
-        }        
-
-
-        // Update game logic (only if enough time has passed)
+                // Update game logic (only if enough time has passed)
         if (delta_time >= TARGET_DELTA) {
-            update_game(state, &Ships, &pos_x, &pos_y);
+            update_game(state, ch_pos, &pos_x, &pos_y);
             last_time = current_time;
         }
 
@@ -363,6 +322,51 @@ void game_loop(game_state *state) {
         if (frame_time < TARGET_DELTA) {
             SDL_Delay(TARGET_DELTA - frame_time);
         }
+
+        // Handle input events of the server
+        handle_events(state);
+
+        // Handle input events of the client
+
+        read_message(fd, message_type, &c, &direction);
+
+        if (strcmp(message_type, "CONNECT") == 0) {
+
+            ch_pos = find_ship_info(Ships, state->universe->num_ships, c);
+            ship_structure * ship = universe_get_ship(state->universe, ch_pos);
+            if (ch_pos == -1) {
+                send_response(fd, message_type, "OK");
+            } else {
+                send_response(fd, message_type, "NOT OK");
+                continue;
+            }
+            chose_position(state->universe, &pos_x, &pos_y, 
+                SHIP_RADIUS, state->config.universe_width, state->config.universe_height);
+            state->universe->num_ships++;
+            universe_add_ship(state->universe, pos_x, pos_y, c);
+            // Render
+            render_game(state);
+
+        }
+        if (strcmp(message_type, "MOVE") == 0) {
+            ch_pos = find_ship_info(Ships, state->universe->num_ships, c);
+            
+            if (ch_pos != -1) {
+                /* claculates new mark position */
+                ship_structure * ship = universe_get_ship(state->universe, ch_pos);
+                send_response(fd, message_type, "OK");
+                pos_x = ship->x;    
+                pos_y = ship->y;
+
+                update_position(state, direction, &pos_x, &pos_y);
+
+                update_game(state, ch_pos, &pos_x, &pos_y);
+                // Render
+                render_game(state);
+
+                }
+            
+        }        
     }
 
     printf("\n=== Universe Simulator Stopped ===\n");

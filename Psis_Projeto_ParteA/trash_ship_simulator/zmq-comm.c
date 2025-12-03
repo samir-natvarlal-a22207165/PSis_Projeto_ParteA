@@ -16,6 +16,11 @@
 void *create_server_channel() {
   void *context = zmq_ctx_new();
   void *responder = zmq_socket(context, ZMQ_REP);
+  
+  // Set receive timeout to make socket non-blocking (10ms timeout)
+  int timeout = 10;
+  zmq_setsockopt(responder, ZMQ_RCVTIMEO, &timeout, sizeof(timeout));
+  
   int response = zmq_bind(responder, "tcp://*:5555");
   (void)response;
   return responder;
@@ -81,7 +86,7 @@ void *create_client_channel(char *server_ip_addr) {
   char server_zmq_addr[100];
   sprintf(server_zmq_addr, "tcp://%s:5555", server_ip_addr);
 
-  zmq_connect(requester, "tcp://localhost:5555");
+  zmq_connect(requester, server_zmq_addr);
 
   return requester;
 }

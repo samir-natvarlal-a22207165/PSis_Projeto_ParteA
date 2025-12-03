@@ -145,9 +145,9 @@ void universe_print_info(universe_data *universe);
 // Check if universe has collapsed (trash reached maximum)
 bool universe_has_collapsed(universe_data *universe);
 
-void chose_position(universe_data *universe,int *x, int *y, int radius, int universe_width, int universe_height);
+void chose_position(universe_data *universe, float *x, float *y, int radius, int universe_width, int universe_height);
 
-void check_colision_ship(universe_data *universe, int index, int *x, int *y,
+void check_colision_ship(universe_data *universe, int index, float *x, float *y,
                     int universe_width, int universe_height);
 
 bool do_circles_intersect(float x1, float y1, float radius1,  float x2, float y2, float radius2);
