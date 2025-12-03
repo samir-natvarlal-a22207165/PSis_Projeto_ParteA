@@ -152,14 +152,18 @@ void handle_events(game_state *state) {
 }
 
 // Update game logic (physics, collisions, etc.)
-void update_game(game_state *state, int ch_pos, int *pos_x, int *pos_y) {
+void update_game(game_state *state, int ch_pos, float * pos_x, float * pos_y) {
     if (state->paused) {
         return; // Skip updates when paused
     }
 
-    // - Update trash positions
+    //Check ships colisions
+    check_colision_ship(state->universe, ch_pos, pos_x, pos_y, state->config.universe_width, state->config.universe_height);
+
+    
+    /*// - Update trash positions
     // - Check collisions
-    check_trash_planet_collisions(state->universe);
+    check_trash_planet_collisions(state->universe);*/
 
     // Check if universe has collapsed
     if (universe_has_collapsed(state->universe)) {
@@ -177,6 +181,32 @@ void update_game(game_state *state, int ch_pos, int *pos_x, int *pos_y) {
 
     // TODO: Update physics (will be implemented in later steps) partB
     // - Calculate gravitational forces partB
+}
+
+
+void update_position(game_state * state, direction_t direction, float * x, float * y){
+
+    switch (direction) {
+    case UP:
+        (*x)--;
+        correct_position(x, state->config.universe_height);
+        return;
+    case DOWN:
+        (*x)++;
+        correct_position(x, state->config.universe_height);
+        return;
+    case LEFT:
+        (*y)--;
+        correct_position(y, state->config.universe_width);
+        return;
+    case RIGHT:
+        (*y)++;
+        correct_position(y, state->config.universe_width);
+        return;
+    default:
+        printf("no direction");
+        break;
+    }
 }
 
 
@@ -204,7 +234,8 @@ void render_game(game_state *state) {
                               planet->y, 
                               planet->name, 
                               i,  // index for label (A0-Z0, A1-Z1, etc.)
-                              planet->is_recycling);
+                              planet->is_recycling,
+                              planet->num_trash);
         }
     }
 
@@ -216,6 +247,15 @@ void render_game(game_state *state) {
             display_draw_trash(state->display, trash->x, trash->y);
         }
     }
+    
+    // Draw ships
+    for (int i = 0; i < state->universe->max_ships; i++) {
+        ship_structure *ship = universe_get_ship(state->universe, i);
+        if (ship) {
+            display_draw_ship(state->display, ship->x, ship->y, ship->name, ship->num_trash);
+        }
+    }
+    
 
     // Draw info overlay (top-left corner)
     char info_text[64];
@@ -258,9 +298,9 @@ void game_loop(game_state *state) {
     int pos_x;
     int pos_y;
 
-    Position position;
     char message_type[100];
     char c;
+    direction_t direction;
 
     while (state->running) {
         current_time = SDL_GetTicks();
@@ -271,11 +311,12 @@ void game_loop(game_state *state) {
 
         // Handle input events of the client
 
-        read_message(fd, message_type, &c, &position);
+        read_message(fd, message_type, &c, &direction);
 
         if (strcmp(message_type, "CONNECT") == 0) {
 
             int ch_pos = find_ch_info(Ships, state->universe->num_ships, c);
+            ship_structure * ship = universe_get_ship(state->universe, ch_pos);
             if (ch_pos == -1) {
                 send_response(fd, message_type, "OK");
             } else {
@@ -285,18 +326,25 @@ void game_loop(game_state *state) {
             chose_position(state->universe, &pos_x, &pos_y, 
                 &state->universe->ships[ch_pos], state->config.universe_width, state->config.universe_width);
             state->universe->num_ships++;
-            update_game(state, ch_pos, &pos_x, &pos_y);
+            universe_add_ship(state->universe, pos_x, pos_y, c);
+
         }
         if (strcmp(message_type, "MOVE") == 0) {
             int ch_pos = find_ch_info(Ships, state->universe->num_ships, c);
-            pos_x = &position.x;
-            pos_y = &position.y;
-
+            
             if (ch_pos != -1) {
                 /* claculates new mark position */
-                update_game(state, ch_pos, &pos_x, &pos_y);
+                ship_structure * ship = universe_get_ship(state->universe, ch_pos);
                 send_response(fd, message_type, "OK");
+                pos_x = ship->x;    
+                pos_y = ship->y;
+
+                update_position(state, &direction, &pos_x, &pos_y);
+
+                update_game(state, ch_pos, &pos_x, &pos_y);
+
                 }
+            
         }        
 
 

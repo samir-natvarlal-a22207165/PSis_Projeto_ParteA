@@ -1,4 +1,7 @@
 #include <math.h>
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 #include "universe-data.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -19,11 +22,12 @@ universe_data* universe_create(universe_config *config) {
     universe->universe_height = config->universe_height;
     universe->max_planets = config->num_planets;
     universe->max_trash = config->max_trash;
-    universe->max_ships = config->max_ships;
-    universe->num_planets = 0;
+    universe->max_ships = config->max_ships; 
+    universe->num_planets = config->max_ships;
     universe->num_trash = 0;
     universe->num_ships = 0;
     universe->recycling_planet_index = 0;
+    universe->ship_capacity = config->ship_capacity;
 
     // Allocate planets array
     universe->planets = (planet_structure*)malloc(sizeof(planet_structure) * config->num_planets);
@@ -55,6 +59,11 @@ universe_data* universe_create(universe_config *config) {
         universe->trash[i].active = false;
     }
 
+    for (int i = 0; i < config->max_ships; i++) {
+        universe->ships[i].trash_indexs = NULL;
+        universe->ships[i].num_trash = 0;
+    }
+
     printf("Universe created: %dx%d, max %d planets, max %d trash\n, max %d ships",
            universe->universe_width, universe->universe_height,
            universe->max_planets, universe->max_trash, universe->max_ships);
@@ -71,6 +80,15 @@ void universe_destroy(universe_data *universe) {
 
     if (universe->trash) {
         free(universe->trash);
+    }
+
+    if (universe->ships) {
+        for (int i = 0; i < universe->num_ships; i++) {
+            if (universe->ships[i].trash_indexs) {
+                free(universe->ships[i].trash_indexs);
+            }
+        }
+        free(universe->ships);
     }
 
     free(universe);
@@ -96,6 +114,8 @@ int universe_add_planet(universe_data *universe, float x, float y, char name) {
     planet->mass = PLANET_MASS;
     planet->name = name;
     planet->is_recycling = false;
+    planet->num_trash = 0;
+
 
     universe->num_planets++;
 
@@ -302,6 +322,49 @@ vector add_vectors(vector v1, vector v2) {
     return make_vector(x, y);
 }
 
+// ===== Ship Functions =====
+int universe_add_ship(universe_data *universe, float x, float y, char name){
+    if (!universe) return -1;
+
+    if (universe->num_ships >= universe->max_ships) {
+        fprintf(stderr, "Cannot add ship: maximum reached\n");
+        return -2;
+    }
+
+    int index = universe->num_ships;
+    ship_structure *ship = &universe->ships[index];
+
+    ship->trash_indexs = NULL; 
+    ship->x = x;
+    ship->y = y;
+    ship->radius = SHIP_RADIUS;
+    ship->name = name;
+    ship->num_trash = 0;
+    
+
+
+    universe->num_planets++;
+
+    printf("Added ship '%c' at (%.1f, %.1f)\n", name, x, y);
+
+    return index;
+}
+
+
+
+ship_structure* universe_get_ship(universe_data *universe, int index) {
+    if (!universe || index < 0 || index >= universe->max_ships) {
+        return NULL;
+    }
+    /*
+    if (!universe->ships[index].active) {
+        return NULL;
+    }
+    */
+    return &universe->ships[index];
+}
+
+
 // ===== Utility Functions =====
 
 void correct_position(float *pos, int universe_size) {
@@ -325,7 +388,7 @@ void choose_position(universe_data *universe, int *x, int *y,
 
         // Check planets
         for (int i = 0; i < universe->num_planets; i++) {
-            planet_structure *planet = &universe->planets[i];
+            planet_structure *planet = universe_get_planet(universe, i);
             if (do_circles_intersect(*x, *y, radius,
                                      planet->x, planet->y, planet->radius)) {
                 valid = false;
@@ -336,9 +399,17 @@ void choose_position(universe_data *universe, int *x, int *y,
 
         // Check trash
         for (int i = 0; i < universe->num_trash; i++) {
-            trash_structure *trash = &universe->trash[i];
+            trash_structure *trash = universe_get_trash(universe, i);
             if (do_circles_intersect(*x, *y, radius,
                                      trash->x, trash->y, trash->radius)) {
+                valid = false;
+                break;
+            }
+        }
+        for (int i = 0; i < universe->num_ships; i++) {
+            ship_structure *ship = universe_get_ship(universe, i);
+            if (do_circles_intersect(*x, *y, radius,
+                                     ship->x, ship->y, ship->radius)) {
                 valid = false;
                 break;
             }
@@ -348,49 +419,88 @@ void choose_position(universe_data *universe, int *x, int *y,
 
 
 
-void choose_position_ships(universe_data *universe, ship_structure* Ships[], int *x, int *y,
-                     int radius, int universe_width, int universe_height)
+void check_position_ship(universe_data *universe, int index, int *x, int *y,
+                      int universe_width, int universe_height)
 {
     bool valid = false;
 
-    while (!valid) {
-        valid = true;
 
-        *x = rand() % universe_width;
-        *y = rand() % universe_height;
-
-        // Check planets
-        for (int i = 0; i < universe->num_planets; i++) {
-            planet_structure *planet = &universe->planets[i];
-            if (do_circles_intersect(*x, *y, radius,
-                                     planet->x, planet->y, planet->radius)) {
-                valid = false;
-                break;
-            }
+    ship_structure * ship = universe_get_ship(universe, index);
+    
+        for (int i = 0; i < universe->num_ships; i++) {
+        ship_structure *ship1 = universe_get_ship(universe, i);
+        if (do_circles_intersect(*x, *y, ship->radius,
+                                    ship1->x, ship1->y, ship1->radius)) {
+            printf("Ship %c hit Ship %c", ship->name, ship1->name);
+            return;
         }
-        if (!valid) continue;
+    }
+    // Check planets
+    for (int i = 0; i < universe->num_planets; i++) {
+        planet_structure *planet = universe_get_planet(universe, i);
+        if (do_circles_intersect(*x, *y, ship->radius,
+                                    planet->x, planet->y, planet->radius)) {
+            if (planet->is_recycling){
 
-        // Check trash
-        for (int i = 0; i < universe->num_trash; i++) {
-            trash_structure *trash = &universe->trash[i];
-            if (do_circles_intersect(*x, *y, radius,
-                                     trash->x, trash->y, trash->radius)) {
-                valid = false;
+                planet->num_trash= ship->num_trash; 
+            
+                if (ship->trash_indexs) {
+                    free(ship->trash_indexs);
+                }
+                ship->trash_indexs = NULL;
+                ship->num_trash = 0;
                 break;
+
+
+            }else{
+                printf("Ship %c hit Planet %c", ship->name, planet->name);
+                float x, y;
+                for (int i =0; i<ship->num_trash; i++){
+                    trash_structure * trash_released = universe_get_trash(universe, i);
+                    choose_position(universe, &x, &y, trash_released->radius, 600, 800);//change
+                    trash_released->x= x;
+                    trash_released->x= y;
+                    trash_released->active=true;
+                }   
+                if (ship->trash_indexs) {
+                    free(ship->trash_indexs);
+                }
+                ship->trash_indexs = NULL;
+                ship->num_trash = 0;
+                return;
             }
         }
     }
+
+    // Check trash
+    for (int i = 0; i < universe->num_trash; i++) {
+        trash_structure *trash = universe_get_trash(universe, i);
+        if (do_circles_intersect(*x, *y, ship->radius,
+                                    trash->x, trash->y, trash->radius)) {
+
+            if(ship->num_trash < universe->ship_capacity){
+                ship->num_trash ++;
+                ship->trash_indexs = (int*)realloc(ship->trash_indexs, sizeof(int) * ship->num_trash);
+                ship->trash_indexs[ship->num_trash - 1] = i;
+                ship->num_trash ++;
+                trash->active = false;
+            }
+            break;; 
+        }
+    }
+    ship->x = *x;
+    ship->y = *y;
 }
 
 
-bool do_circles_intersect(int x1, int y1, int r1,
-                          int x2, int y2, int r2)
+bool do_circles_intersect(float x1, float y1, float r1,
+                          float x2, float y2, float r2)
 {
-    int dx = x2 - x1;
-    int dy = y2 - y1;
+    int dx = (int)(x2 - x1);
+    int dy = (int)(y2 - y1);
 
     int dist2 = dx*dx + dy*dy;
-    int rsum = r1 + r2;
+    int rsum = (int)(r1 + r2);
 
     return dist2 < rsum * rsum;   // true if intersect/overlap
 }

@@ -10,6 +10,9 @@
 #define TRASH_MASS 1.0
 #define GRAVITATIONAL_CONSTANT 1.0
 #define TRASH_FRICTION 0.99  // reduces velocity by 1% per time unit
+#define SHIP_RADIUS 10
+#define MAX_TRASH 26
+
 
 // Vector structure for physics calculations
 typedef struct {
@@ -25,6 +28,7 @@ typedef struct {
     float radius;         // radiys (always 20.0)
     char name;            // single letter identifier (A, B, C, ...)
     bool is_recycling;    // true if this planet is the recycling planet
+    int num_trash;
 } planet_structure;
 
 // Trash structure
@@ -42,10 +46,10 @@ typedef struct {
 typedef struct {
     float x;              // X position
     float y;              // Y position
-    float mass;           // mass (always 10.0)
     float radius;         // radiys (always 10.0)
     char name;            // single letter identifier (A, B, C, ...)
-    bool is_recycling;    // true if this planet is the recycling planet
+    int *trash_indexs;
+    int num_trash;
 } ship_structure;
 
 // Universe structure - holds all universe data
@@ -61,6 +65,7 @@ typedef struct {
     ship_structure *ships;
     int num_ships;
     int max_ships;
+    int ship_capacity;
     
     int universe_width;
     int universe_height;
@@ -101,6 +106,7 @@ int universe_add_trash(universe_data *universe, float x, float y,
 // Get trash by index
 trash_structure* universe_get_trash(universe_data *universe, int index);
 
+
 // Remove/deactivate trash
 void universe_remove_trash(universe_data *universe, int index);
 
@@ -118,6 +124,13 @@ vector make_vector(float x, float y);
 // Add two vectors
 vector add_vectors(vector v1, vector v2);
 
+// ===== Planet Functions =====
+
+int universe_add_ship(universe_data *universe, float x, float y, char letter);
+
+// Get ship by index
+ship_structure* universe_get_ship(universe_data *universe, int index);
+
 // ===== Utility Functions =====
 
 // Correct position for universe wraparound (teleportation at edges)
@@ -134,9 +147,9 @@ bool universe_has_collapsed(universe_data *universe);
 
 void chose_position(universe_data *universe,int *x, int *y, int radius, int universe_width, int universe_height);
 
-void check_position_ships(universe_data *universe, int *x, int *y,
-                     int radius, int universe_width, int universe_height);
+void check_colision_ship(universe_data *universe, int index, int *x, int *y,
+                    int universe_width, int universe_height);
 
-bool do_circles_intersect(int x1, int y1, int radius1,  int x2, int y2, int radius2);
+bool do_circles_intersect(float x1, float y1, float radius1,  float x2, float y2, float radius2);
 
 #endif // UNIVERSE_DATA

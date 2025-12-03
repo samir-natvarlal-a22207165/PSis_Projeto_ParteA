@@ -15,7 +15,7 @@ message connect_request {
 // Client movement request - sent when client moves their letter
 message movement_request {
   required bytes letter = 1;      // The character being moved
-  required Position position = 2; // X/Y position of the letter
+  required bytes direction = 2;   // Direction: 'u', 'd', 'l', 'r'
 }
 
 // Unified server response - used for both connection and movement responses

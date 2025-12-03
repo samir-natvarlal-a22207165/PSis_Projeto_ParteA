@@ -46,10 +46,13 @@ void display_draw_text(display_context *ctx, const char *text, int x, int y,
 
 // Draw a planet at position
 void display_draw_planet(display_context *ctx, float x, float y, char name, 
-                        int index, bool is_recycling);
+                        int index, bool is_recycling, int num_trash);
 
 // Draw trash at position
 void display_draw_trash(display_context *ctx, float x, float y);
+
+// Draw ship at position
+void display_draw_ship(display_context *ctx, float x, float y, char name, int num_trash);
 
 // Draw game over screen (universe collapsed)
 void display_draw_game_over(display_context *ctx);

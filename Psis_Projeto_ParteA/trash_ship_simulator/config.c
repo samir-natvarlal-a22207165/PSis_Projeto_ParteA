@@ -59,6 +59,13 @@ int load_config(const char *filename, universe_config *config) {
         return -1;
     }
 
+        // Read ship_capacity
+    if (config_lookup_int(&cfg, "max_ships", &config->max_ships) == CONFIG_FALSE) {
+        fprintf(stderr, "Missing parameter: max_ships\n");
+        config_destroy(&cfg);
+        return -1;
+    }
+
     // Validate values
     if (config->universe_width <= 0 || config->universe_height <= 0) {
         fprintf(stderr, "Error: Universe dimensions must be positive\n");
@@ -86,6 +93,12 @@ int load_config(const char *filename, universe_config *config) {
 
     if (config->ship_capacity <= 0) {
         fprintf(stderr, "Error: Ship capacity must be positive\n");
+        config_destroy(&cfg);
+        return -1;
+    }
+
+    if (config->ship_capacity <= 0) {
+        fprintf(stderr, "Error: Max ships must be positive\n");
         config_destroy(&cfg);
         return -1;
     }

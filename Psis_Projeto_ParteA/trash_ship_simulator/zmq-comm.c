@@ -17,11 +17,11 @@ void *create_server_channel() {
   void *context = zmq_ctx_new();
   void *responder = zmq_socket(context, ZMQ_REP);
   int response = zmq_bind(responder, "tcp://*:5555");
-  (void)response; // Suppress unused variable warning
+  (void)response;
   return responder;
 }
 
-void read_message(void *fd, char *message_type, char *c, Position *position) {
+void read_message(void *fd, char *message_type, char *c, direction_t *direction) {
   uint8_t buffer[1024];
   int size = zmq_recv(fd, buffer, sizeof(buffer), 0);
 
@@ -29,13 +29,12 @@ void read_message(void *fd, char *message_type, char *c, Position *position) {
     strcpy(message_type, "ERROR");
     return;
   }
-  // Try to unpack as MovementRequest FIRST (has more fields: letter + position)
+
   MovementRequest *move_req = movement_request__unpack(NULL, size, buffer);
-  if (move_req != NULL && (move_req->position->x > 0)||(move_req->position->y > 0)) { 
+  if (move_req != NULL && move_req->direction.len > 0) { 
     strcpy(message_type, "MOVE");
     *c = (move_req->letter.len > 0) ? move_req->letter.data[0] : '\0';
-    position->x = (Sint32)move_req->position->x;
-    position->y = (Sint32)move_req->position->y;
+    *direction = (direction_t)move_req->direction.data[0];
     movement_request__free_unpacked(move_req, NULL);
     return;
   }
@@ -43,7 +42,6 @@ void read_message(void *fd, char *message_type, char *c, Position *position) {
     movement_request__free_unpacked(move_req, NULL);
   }
 
-  // Try to unpack as ConnectRequest
   ConnectRequest *conn_req = connect_request__unpack(NULL, size, buffer);
   if (conn_req != NULL) {
     strcpy(message_type, "CONNECT");
@@ -51,7 +49,7 @@ void read_message(void *fd, char *message_type, char *c, Position *position) {
     connect_request__free_unpacked(conn_req, NULL);
     return;
   }
-  // Unknown message type
+
   strcpy(message_type, "UNKNOWN");
 }
 
@@ -61,7 +59,6 @@ void send_response(void *fd, char *message_type, char *message) {
 
   ServerResponse resp = SERVER_RESPONSE__INIT;
 
-  // Set the response type and success value
   if (strcmp(message_type, "CONNECT") == 0) {
     resp.type = SERVER_RESPONSE__RESPONSE_TYPE__CONNECT;
     resp.success = (strcmp(message, "OK") == 0) ? 1 : 0;
@@ -69,7 +66,6 @@ void send_response(void *fd, char *message_type, char *message) {
     resp.type = SERVER_RESPONSE__RESPONSE_TYPE__MOVEMENT;
     resp.success = (strcmp(message, "WALL") == 0) ? 0 : 1;
   } else {
-    // Default to CONNECT with success
     resp.type = SERVER_RESPONSE__RESPONSE_TYPE__CONNECT;
     resp.success = 1;
   }
@@ -84,7 +80,6 @@ void *create_client_channel(char *server_ip_addr) {
 
   char server_zmq_addr[100];
   sprintf(server_zmq_addr, "tcp://%s:5555", server_ip_addr);
-  //zmq_connect(requester, server_zmq_addr);
 
   zmq_connect(requester, "tcp://localhost:5555");
 
@@ -95,23 +90,17 @@ void send_connection_message(void *fd, char ch) {
   ConnectRequest req = CONNECT_REQUEST__INIT;
   req.letter.data = (uint8_t *)&ch;
   req.letter.len = 1;
-
   uint8_t buffer[1024];
   size_t packed_size = connect_request__pack(&req, buffer);
   zmq_send(fd, buffer, packed_size, 0);
 }
 
-void send_movement_message(void *fd, char ch, Position *position) {
+void send_movement_message(void *fd, char ch, direction_t direction) {
   MovementRequest req = MOVEMENT_REQUEST__INIT;
   req.letter.data = (uint8_t *)&ch;
   req.letter.len = 1;
-  // Create a protobuf Position message on the stack
-  PbPosition pbpos = POSITION__INIT;
-  pbpos.x = (int32_t)position->x;
-  pbpos.x = (int32_t)position->x;
-
-  // Point the request to the message and pack
-  req.position = &pbpos;
+  req.direction.data = (uint8_t *)&direction;
+  req.direction.len = 1;
 
   uint8_t buffer[1024];
   size_t packed_size = movement_request__pack(&req, buffer);
@@ -127,10 +116,8 @@ void receive_response(void *fd, char *message) {
     return;
   }
 
-  // Unpack as unified server_response
   ServerResponse *resp = server_response__unpack(NULL, size, buffer);
   if (resp != NULL) {
-    // Check the type and success fields
     if (resp->type == SERVER_RESPONSE__RESPONSE_TYPE__CONNECT) {
       strcpy(message, resp->success ? "OK" : "NOT OK");
     }else {
@@ -140,6 +127,5 @@ void receive_response(void *fd, char *message) {
     return;
   }
 
-  // Unknown response
   strcpy(message, "UNKNOWN");
 }

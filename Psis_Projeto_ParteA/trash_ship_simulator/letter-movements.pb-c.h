@@ -15,7 +15,7 @@ PROTOBUF_C__BEGIN_DECLS
 #endif
 
 
-typedef struct PbPosition PbPosition;
+typedef struct Position Position;
 typedef struct ConnectRequest ConnectRequest;
 typedef struct MovementRequest MovementRequest;
 typedef struct ServerResponse ServerResponse;
@@ -31,7 +31,7 @@ typedef enum _ServerResponse__ResponseType {
 
 /* --- messages --- */
 
-struct  PbPosition
+struct  Position
 {
   ProtobufCMessage base;
   int32_t x;
@@ -39,7 +39,7 @@ struct  PbPosition
 };
 #define POSITION__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&position__descriptor) \
-   , 0, 0 }
+    , 0, 0 }
 
 
 /*
@@ -69,13 +69,13 @@ struct  MovementRequest
    */
   ProtobufCBinaryData letter;
   /*
-   * Position: X/Y coordinates of the letter
+   * Direction: 'u', 'd', 'l', 'r'
    */
-  PbPosition *position;
+  ProtobufCBinaryData direction;
 };
 #define MOVEMENT_REQUEST__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&movement_request__descriptor) \
-   , {0,NULL}, NULL }
+    , {0,NULL}, {0,NULL} }
 
 
 /*
@@ -100,23 +100,23 @@ struct  ServerResponse
 
 /* Position methods */
 void   position__init
-  (PbPosition         *message);
+                     (Position         *message);
 size_t position__get_packed_size
-  (const PbPosition   *message);
+                     (const Position   *message);
 size_t position__pack
-  (const PbPosition   *message,
-       uint8_t          *out);
+                     (const Position   *message,
+                      uint8_t             *out);
 size_t position__pack_to_buffer
-  (const PbPosition   *message,
-       ProtobufCBuffer  *buffer);
-PbPosition *
-  position__unpack
-    (ProtobufCAllocator  *allocator,
-     size_t               len,
-     const uint8_t       *data);
-  void   position__free_unpacked
-    (PbPosition *message,
-       ProtobufCAllocator *allocator);
+                     (const Position   *message,
+                      ProtobufCBuffer     *buffer);
+Position *
+       position__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   position__free_unpacked
+                     (Position *message,
+                      ProtobufCAllocator *allocator);
 /* ConnectRequest methods */
 void   connect_request__init
                      (ConnectRequest         *message);
@@ -177,7 +177,7 @@ void   server_response__free_unpacked
 /* --- per-message closures --- */
 
 typedef void (*Position_Closure)
-                 (const PbPosition *message,
+                 (const Position *message,
                   void *closure_data);
 typedef void (*ConnectRequest_Closure)
                  (const ConnectRequest *message,

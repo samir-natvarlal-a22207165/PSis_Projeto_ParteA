@@ -191,7 +191,7 @@ void display_draw_text(display_context *ctx, const char *text, int x, int y,
 // ===== Game Object Drawing Functions =====
 
 void display_draw_planet(display_context *ctx, float x, float y, char name, 
-                        int index, bool is_recycling) {
+                        int index, bool is_recycling, int num_trash) {
     if (!ctx || !ctx->renderer) return;
 
     int radius = 20; // PLANET_RADIUS from universe-data.h
@@ -210,10 +210,10 @@ void display_draw_planet(display_context *ctx, float x, float y, char name,
     // Draw filled circle
     display_draw_circle(ctx, cx, cy, radius);
 
-    // Draw identifier text with letter cycling (A0-Z0, then A1-Z1, etc.)
-    // Letter cycles through A-Z, number increments every 26 planets
+    // number increments for trash
+    // Letter cycles through A-Z(and other caracters)
     char letter = 'A' + (index % 26);
-    int number = index / 26;
+    int number = num_trash;
     
     char label[4];
     snprintf(label, sizeof(label), "%c%d", letter, number);
@@ -225,6 +225,7 @@ void display_draw_planet(display_context *ctx, float x, float y, char name,
     // Draw text in black
     display_draw_text(ctx, label, text_x, text_y, 0, 0, 0);
 }
+
 
 void display_draw_trash(display_context *ctx, float x, float y) {
     if (!ctx || !ctx->renderer) return;
@@ -239,6 +240,39 @@ void display_draw_trash(display_context *ctx, float x, float y) {
     // Draw small filled circle
     display_draw_circle(ctx, cx, cy, trash_size);
 }
+
+
+void display_draw_ship(display_context *ctx, float x, float y, char name, 
+                         int num_trash) {
+    if (!ctx || !ctx->renderer) return;
+
+    int radius = 20; // PLANET_RADIUS from universe-data.h
+    int cx = (int)x;
+    int cy = (int)y;
+
+    // Set light red color for ship
+
+    display_set_color(ctx, 100, 0, 0, 255);
+
+    // Draw filled circle
+    display_draw_circle(ctx, cx, cy, radius);
+
+    // number increments for trash
+    // Letter cycles through A-Z(and other caracters)
+    char letter = name;
+    int number = num_trash;
+    
+    char label[4];
+    snprintf(label, sizeof(label), "%c%d", letter, number);
+    
+    // Position text at lower right of planet
+    int text_x = cx + radius - 10;
+    int text_y = cy + radius - 10;
+    
+    // Draw text in black
+    display_draw_text(ctx, label, text_x, text_y, 0, 0, 0);
+}
+
 
 void display_draw_game_over(display_context *ctx) {
     if (!ctx || !ctx->renderer) return;

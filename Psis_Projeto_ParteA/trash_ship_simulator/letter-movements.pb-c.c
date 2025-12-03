@@ -8,43 +8,43 @@
 
 #include "letter-movements.pb-c.h"
 void   position__init
-                     (PbPosition         *message)
+                     (Position         *message)
 {
-  static const PbPosition init_value = POSITION__INIT;
+  static const Position init_value = POSITION__INIT;
   *message = init_value;
 }
 size_t position__get_packed_size
-                     (const PbPosition *message)
+                     (const Position *message)
 {
   assert(message->base.descriptor == &position__descriptor);
   return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
 }
 size_t position__pack
-                     (const PbPosition *message,
+                     (const Position *message,
                       uint8_t       *out)
 {
   assert(message->base.descriptor == &position__descriptor);
   return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
 }
 size_t position__pack_to_buffer
-                     (const PbPosition *message,
+                     (const Position *message,
                       ProtobufCBuffer *buffer)
 {
   assert(message->base.descriptor == &position__descriptor);
   return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
 }
-PbPosition *
+Position *
        position__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data)
 {
-  return (PbPosition *)
+  return (Position *)
      protobuf_c_message_unpack (&position__descriptor,
                                 allocator, len, data);
 }
 void   position__free_unpacked
-                     (PbPosition *message,
+                     (Position *message,
                       ProtobufCAllocator *allocator)
 {
   if(!message)
@@ -195,7 +195,7 @@ static const ProtobufCFieldDescriptor position__field_descriptors[2] =
     PROTOBUF_C_LABEL_REQUIRED,
     PROTOBUF_C_TYPE_SINT32,
     0,   /* quantifier_offset */
-    offsetof(PbPosition, x),
+    offsetof(Position, x),
     NULL,
     NULL,
     0,             /* flags */
@@ -207,7 +207,7 @@ static const ProtobufCFieldDescriptor position__field_descriptors[2] =
     PROTOBUF_C_LABEL_REQUIRED,
     PROTOBUF_C_TYPE_SINT32,
     0,   /* quantifier_offset */
-    offsetof(PbPosition, y),
+    offsetof(Position, y),
     NULL,
     NULL,
     0,             /* flags */
@@ -226,11 +226,11 @@ static const ProtobufCIntRange position__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor position__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "position",
+  "Position",
   "Position",
   "Position",
   "",
-  sizeof(PbPosition),
+  sizeof(Position),
   2,
   position__field_descriptors,
   position__field_indices_by_name,
@@ -238,7 +238,6 @@ const ProtobufCMessageDescriptor position__descriptor =
   (ProtobufCMessageInit) position__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-
 static const ProtobufCFieldDescriptor connect_request__field_descriptors[1] =
 {
   {
@@ -292,21 +291,21 @@ static const ProtobufCFieldDescriptor movement_request__field_descriptors[2] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "position",
+    "direction",
     2,
     PROTOBUF_C_LABEL_REQUIRED,
-    PROTOBUF_C_TYPE_MESSAGE,
+    PROTOBUF_C_TYPE_BYTES,
     0,   /* quantifier_offset */
-    offsetof(MovementRequest, position),
+    offsetof(MovementRequest, direction),
     NULL,
-    &position__descriptor,
+    NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
 };
 static const unsigned movement_request__field_indices_by_name[] = {
+  1,   /* field[1] = direction */
   0,   /* field[0] = letter */
-  1,   /* field[1] = position */
 };
 static const ProtobufCIntRange movement_request__number_ranges[1 + 1] =
 {
