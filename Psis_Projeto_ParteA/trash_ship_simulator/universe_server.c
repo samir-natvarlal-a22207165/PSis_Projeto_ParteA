@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <time.h>
 #include "config.h"
 #include "display.h"
 #include "universe-data.h"
@@ -67,13 +68,10 @@ game_state* game_init(const char *config_file) {
                                   state->config.universe_width, 
                                   state->config.universe_height);
 
-    planet_structure *planets = state->universe->planets;
-    trash_structure *trash = state->universe->trash;
-
     //create planets at random locations
     float x, y;
     for (int i=0 ; i < state->config.num_planets; i++){
-        chose_position(state->universe,&x, &y,planets[i].radius, state->config.universe_width, state->config.universe_height);
+        chose_position(state->universe,&x, &y, (float)PLANET_RADIUS, state->config.universe_width, state->config.universe_height);
         universe_add_planet(state->universe, x, y, (char)(i+65));
     }
 
@@ -81,7 +79,7 @@ game_state* game_init(const char *config_file) {
     
     ////create trash at random locations 
     for (int i=0 ; i < state->config.initial_trash; i++){
-        chose_position(state->universe, &x, &y,trash[i].radius, state->config.universe_width, state->config.universe_height);
+        chose_position(state->universe, &x, &y,(float)TRASH_RADIUS, state->config.universe_width, state->config.universe_height);
         universe_add_trash(state->universe, x, y, (float) 0,(float) 0);
     }
     
@@ -153,13 +151,13 @@ void handle_events(game_state *state) {
 }
 
 // Update game logic (physics, collisions, etc.)
-void update_game(game_state *state, int ch_pos, float * pos_x, float * pos_y) {
+void update_game(game_state *state, int ch_pos, float * pos_x, float * pos_y, int universe_width, int universe_height) {
     if (state->paused) {
         return; // Skip updates when paused
     }
 
     //Check ships colisions
-    check_colision_ship(state->universe, ch_pos, pos_x, pos_y, state->config.universe_width, state->config.universe_height);
+    check_colision_ship(state->universe, ch_pos, pos_x, pos_y, universe_width, universe_height);
 
     
     /*// - Update trash positions
@@ -191,22 +189,18 @@ void update_position(game_state * state, direction_t direction, float * x, float
     case UP:
         (*y)--;
         correct_position(y, state->config.universe_height);
-        printf("UP\n");
         return;
     case DOWN:
         (*y)++;
         correct_position(y, state->config.universe_height);
-        printf("DOWN\n");
         return;
     case LEFT:
         (*x)--;
         correct_position(x, state->config.universe_width);
-        printf("LEFT\n");
         return;
     case RIGHT:
         (*x)++;
         correct_position(x, state->config.universe_width);
-        printf("RIGHT\n");
         return;
     default:
         printf("no direction");
@@ -280,9 +274,9 @@ void render_game(game_state *state) {
 
 // Main game loop
 void game_loop(game_state *state) {
-    Uint32 last_time = SDL_GetTicks();
+    //Uint32 last_time = SDL_GetTicks();
     Uint32 current_time;
-    Uint32 delta_time;
+    //Uint32 delta_time;
     const Uint32 TARGET_DELTA = 10; // 10ms per frame (100 FPS)
 
     printf("\n=== Universe Simulator Running ===\n");
@@ -306,13 +300,15 @@ void game_loop(game_state *state) {
 
     while (state->running) {
         current_time = SDL_GetTicks();
-        delta_time = current_time - last_time;
+        //delta_time = current_time - last_time;
         
+    /*
         // Update game logic (only if enough time has passed)
         if (delta_time >= TARGET_DELTA) {
-            update_game(state, ch_pos, &pos_x, &pos_y);
+            update_game(state, ch_pos, &pos_x, &pos_y, state->config.universe_width, state->config.universe_height);
             last_time = current_time;
         }
+        */
 
         // Render
         render_game(state);
@@ -367,7 +363,7 @@ void game_loop(game_state *state) {
 
             update_position(state, direction, &pos_x, &pos_y);
 
-            update_game(state, ch_pos, &pos_x, &pos_y);
+            update_game(state, ch_pos, &pos_x, &pos_y, state->config.universe_width, state->config.universe_height);
             
         }        
     }
@@ -376,7 +372,10 @@ void game_loop(game_state *state) {
 }
 
 int main(int argc, char *argv[]) {
+    
     const char *config_file = "universe.conf";
+    // Inicializar gerador de números aleatórios
+    srand(time(NULL));
 
     // Allow custom config file via command line
     if (argc > 1) {

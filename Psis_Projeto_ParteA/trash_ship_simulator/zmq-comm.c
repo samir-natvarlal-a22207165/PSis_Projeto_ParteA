@@ -69,7 +69,7 @@ void send_response(void *fd, char *message_type, char *message) {
     resp.success = (strcmp(message, "OK") == 0) ? 1 : 0;
   } else if (strcmp(message_type, "MOVE") == 0) {
     resp.type = SERVER_RESPONSE__RESPONSE_TYPE__MOVEMENT;
-    resp.success = (strcmp(message, "OK") == 0) ? 0 : 1;
+    resp.success = (strcmp(message, "OK") == 0) ? 1 : 0;
   } else {
     resp.type = SERVER_RESPONSE__RESPONSE_TYPE__CONNECT;
     resp.success = 1;

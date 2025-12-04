@@ -110,7 +110,7 @@ int universe_add_planet(universe_data *universe, float x, float y, char name) {
     
     planet->x = x;
     planet->y = y;
-    planet->radius = (int)20;
+    planet->radius = PLANET_RADIUS;
     planet->mass = PLANET_MASS;
     planet->name = name;
     planet->is_recycling = false;
@@ -260,7 +260,7 @@ int universe_add_trash(universe_data *universe, float x, float y,
     trash->x = x;
     trash->y = y;
     trash->mass = TRASH_MASS;
-    trash->radius = (int)4;
+    trash->radius = TRASH_RADIUS;
     trash->velocity.amplitude = velocity_amplitude;
     trash->velocity.angle = velocity_angle;
     trash->acceleration.amplitude = 0.0;
@@ -398,22 +398,29 @@ void chose_position(universe_data *universe, float *x, float *y,
         if (!valid) continue;
 
         // Check trash
-        for (int i = 0; i < universe->num_trash; i++) {
+        for (int i = 0; i < universe->max_trash; i++) {
             trash_structure *trash = universe_get_trash(universe, i);
-            if (do_circles_intersect(*x, *y, radius,
-                                     trash->x, trash->y, trash->radius)) {
-                valid = false;
-                break;
+            if (trash){
+                if (do_circles_intersect(*x, *y, radius,
+                                         trash->x, trash->y, trash->radius)) {
+                    valid = false;
+                    break;
+                }
             }
         }
+        if (!valid) continue;
+
         for (int i = 0; i < universe->num_ships; i++) {
             ship_structure *ship = universe_get_ship(universe, i);
-            if (do_circles_intersect(*x, *y, radius,
-                                     ship->x, ship->y, ship->radius)) {
-                valid = false;
-                break;
+            if (ship) {
+                if (do_circles_intersect(*x, *y, radius,
+                                         ship->x, ship->y, ship->radius)) {
+                    valid = false;
+                    break;
+                }
             }
         }
+        if (!valid) continue;
     }
 }
 
@@ -435,7 +442,7 @@ void check_colision_ship(universe_data *universe, int index, float *x, float *y,
         if (!ship1) continue;  // Pular se nave for NULL
         
         if (do_circles_intersect(*x, *y, ship->radius,
-                                    ship1->x, ship1->y, ship1->radius)) {
+                                    ship1->x, ship1->y, CENTER_RADIUS)) {
             printf("Ship %c hit Ship %c\n", ship->name, ship1->name);
             return;
         }
@@ -447,11 +454,14 @@ void check_colision_ship(universe_data *universe, int index, float *x, float *y,
         if (!planet) continue;  // Pular se planeta for NULL
         
         if (do_circles_intersect(*x, *y, ship->radius,
-                                    planet->x, planet->y, planet->radius)) {
+                                    planet->x, planet->y, CENTER_RADIUS)) {
             if (planet->is_recycling){
 
                 planet->num_trash += ship->num_trash;
-                printf("Ship %c hit Recycling Planet %c which collected %d trash\n ", ship->name, planet->name, planet->num_trash); 
+                
+                if (ship->num_trash != 0){
+                    printf("Ship %c hit Recycling Planet %c which collected %d trash\n ", ship->name, planet->name, planet->num_trash); 
+                }
             
                 if (ship->trash_indexs) {
                     free(ship->trash_indexs);
@@ -467,16 +477,23 @@ void check_colision_ship(universe_data *universe, int index, float *x, float *y,
                 // Liberar trash coletado pela nave
                 for (int j = 0; j < ship->num_trash; j++){
                     int trash_idx = ship->trash_indexs[j];
-                    trash_structure * trash_released = universe_get_trash(universe, trash_idx);
-                    if (trash_released) {
+                    
+                    // Acessar diretamente o array para pegar lixo inativo
+                    if (universe && trash_idx >= 0 && trash_idx < universe->max_trash) {
+                        trash_structure *trash_released = &universe->trash[trash_idx];
+                        
+                        trash_released->active = true;
                         float new_x, new_y;
                         chose_position(universe, &new_x, &new_y, trash_released->radius, 
                                      universe_width, universe_height);
+                        
                         trash_released->x = new_x;
                         trash_released->y = new_y;
-                        trash_released->active = true;
+                        universe->num_trash++; // Importante: incrementar o contador de lixo ativo!
+                        
+                        printf("Trash %d released back into universe at (%.1f, %.1f)\n", trash_idx, new_x, new_y);
                     }
-                }   
+                }
                 
                 if (ship->trash_indexs) {
                     free(ship->trash_indexs);
@@ -494,7 +511,7 @@ void check_colision_ship(universe_data *universe, int index, float *x, float *y,
         if (!trash) continue;  // Pular se trash for NULL ou inativo
         
         if (do_circles_intersect(*x, *y, ship->radius,
-                                    trash->x, trash->y, trash->radius)) {
+                                    trash->x, trash->y, CENTER_RADIUS)) {
 
             if(ship->num_trash < universe->ship_capacity){
                 ship->num_trash++;

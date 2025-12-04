@@ -8,10 +8,13 @@
 #define PLANET_MASS 10.0
 #define PLANET_RADIUS 20
 #define TRASH_MASS 1.0
+#define TRASH_RADIUS 3.0
 #define GRAVITATIONAL_CONSTANT 1.0
 #define TRASH_FRICTION 0.99  // reduces velocity by 1% per time unit
-#define SHIP_RADIUS 10
-#define MAX_TRASH 26
+#define SHIP_RADIUS 15
+#define SHIP_CAPACITY 26
+#define MAX_SHIPS 26
+#define CENTER_RADIUS 1.0
 
 
 // Vector structure for physics calculations

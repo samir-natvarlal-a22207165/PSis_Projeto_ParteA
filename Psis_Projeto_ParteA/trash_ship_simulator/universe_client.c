@@ -28,7 +28,7 @@ int main(int argc, char** argv){
     }
 
     srand(time(NULL));
-    char ch = 'a' + (rand() % 26);
+    char ch = 'A' + (rand() % 26);
 
     send_connection_message(fd, ch);
     char message[100];
