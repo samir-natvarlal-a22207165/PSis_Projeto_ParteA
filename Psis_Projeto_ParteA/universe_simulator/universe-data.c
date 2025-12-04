@@ -127,75 +127,51 @@ void universe_initialize_planets(universe_data *universe) {
 
     printf("\nInitializing %d planets...\n", universe->max_planets);
 
-    // Strategy: distribute planets in a pattern to avoid collisions
-    // We'll use different strategies based on number of planets
+    // Minimum distance between planets = 2 * radius + margin
+    float min_distance = PLANET_RADIUS * 4.0; // 80 pixels (2 * 20 * 2)
+    
+    // Margin from edges
+    float margin = PLANET_RADIUS * 2; // 40 pixels
 
-    if (universe->max_planets == 1) {
-        // Single planet in center
-        universe_add_planet(universe, 
-                          universe->universe_width / 2.0,
-                          universe->universe_height / 2.0,
-                          'A');
-    } 
-    else if (universe->max_planets == 2) {
-        // Two planets horizontally spaced
-        universe_add_planet(universe, 
-                          universe->universe_width * 0.33,
-                          universe->universe_height / 2.0,
-                          'A');
-        universe_add_planet(universe, 
-                          universe->universe_width * 0.67,
-                          universe->universe_height / 2.0,
-                          'B');
-    }
-    else if (universe->max_planets <= 5) {
-        // Arrange planets in a pentagon/circle pattern
-        float cx = universe->universe_width / 2.0;
-        float cy = universe->universe_height / 2.0;
-        float radius = fmin(universe->universe_width, universe->universe_height) * 0.35;
-        
-        for (int i = 0; i < universe->max_planets; i++) {
-            float angle = (2.0 * M_PI * i) / universe->max_planets - M_PI / 2.0; // Start from top
-            float x = cx + radius * cos(angle);
-            float y = cy + radius * sin(angle);
-            
-            universe_add_planet(universe, x, y, 'A' + i);
+    int max_attempts = 1000; // Maximum attempts to place a planet
+
+    for (int i = 0; i < universe->max_planets; i++) {
+        float x, y;
+        bool valid_position = false;
+        int attempts = 0;
+
+        while (!valid_position && attempts < max_attempts) {
+            attempts++;
+
+            // Generate random position within bounds (with margin)
+            x = margin + (rand() % (int)(universe->universe_width - 2 * margin));
+            y = margin + (rand() % (int)(universe->universe_height - 2 * margin));
+
+            // Check distance from all previously placed planets
+            valid_position = true;
+            for (int j = 0; j < i; j++) {
+                float dx = x - universe->planets[j].x;
+                float dy = y - universe->planets[j].y;
+                float distance = sqrt(dx * dx + dy * dy);
+
+                if (distance < min_distance) {
+                    valid_position = false;
+                    break;
+                }
+            }
         }
-    }
-    else {
-        // For more planets, use a grid-like distribution with some randomness
-        int cols = (int)ceil(sqrt(universe->max_planets));
-        int rows = (int)ceil((float)universe->max_planets / cols);
-        
-        float spacing_x = universe->universe_width / (cols + 1.0);
-        float spacing_y = universe->universe_height / (rows + 1.0);
-        
-        // Add some margin from edges
-        float margin_x = PLANET_RADIUS * 3;
-        float margin_y = PLANET_RADIUS * 3;
-        
-        for (int i = 0; i < universe->max_planets; i++) {
-            int row = i / cols;
-            int col = i % cols;
-            
-            float base_x = margin_x + spacing_x * (col + 1);
-            float base_y = margin_y + spacing_y * (row + 1);
-            
-            // Add small random offset to make it less uniform (±10% of spacing)
-            float offset_x = (rand() % 100 - 50) / 500.0 * spacing_x;
-            float offset_y = (rand() % 100 - 50) / 500.0 * spacing_y;
-            
-            float x = base_x + offset_x;
-            float y = base_y + offset_y;
-            
-            // Ensure planets stay within bounds
-            if (x < margin_x) x = margin_x;
-            if (x > universe->universe_width - margin_x) x = universe->universe_width - margin_x;
-            if (y < margin_y) y = margin_y;
-            if (y > universe->universe_height - margin_y) y = universe->universe_height - margin_y;
-            
-            universe_add_planet(universe, x, y, 'A' + i);
+
+        if (!valid_position) {
+            fprintf(stderr, "Warning: Could not find valid position for planet %d after %d attempts\n", 
+                    i, max_attempts);
+            // Place it anyway with some random position (fallback)
+            x = margin + (rand() % (int)(universe->universe_width - 2 * margin));
+            y = margin + (rand() % (int)(universe->universe_height - 2 * margin));
         }
+
+        // Add planet with letter name
+        char name = 'A' + (i % 26);
+        universe_add_planet(universe, x, y, name);
     }
 
     // Set first planet as recycling planet by default
