@@ -422,27 +422,36 @@ void chose_position(universe_data *universe, float *x, float *y,
 void check_colision_ship(universe_data *universe, int index, float *x, float *y,
                       int universe_width, int universe_height)
 {
-    bool valid = false;
-
-
     ship_structure * ship = universe_get_ship(universe, index);
+    if (!ship) {
+        return;  // Nave inválida
+    }
     
-        for (int i = 0; i < universe->num_ships; i++) {
+    // Check collision with other ships (skip self)
+    for (int i = 0; i < universe->num_ships; i++) {
+        if (i == index) continue;  // Pular a própria nave
+        
         ship_structure *ship1 = universe_get_ship(universe, i);
+        if (!ship1) continue;  // Pular se nave for NULL
+        
         if (do_circles_intersect(*x, *y, ship->radius,
                                     ship1->x, ship1->y, ship1->radius)) {
-            printf("Ship %c hit Ship %c", ship->name, ship1->name);
+            printf("Ship %c hit Ship %c\n", ship->name, ship1->name);
             return;
         }
     }
+    
     // Check planets
     for (int i = 0; i < universe->num_planets; i++) {
         planet_structure *planet = universe_get_planet(universe, i);
+        if (!planet) continue;  // Pular se planeta for NULL
+        
         if (do_circles_intersect(*x, *y, ship->radius,
                                     planet->x, planet->y, planet->radius)) {
             if (planet->is_recycling){
 
-                planet->num_trash= ship->num_trash; 
+                planet->num_trash += ship->num_trash;
+                printf("Ship %c hit Recycling Planet %c which collected %d trash\n ", ship->name, planet->name, planet->num_trash); 
             
                 if (ship->trash_indexs) {
                     free(ship->trash_indexs);
@@ -453,15 +462,22 @@ void check_colision_ship(universe_data *universe, int index, float *x, float *y,
 
 
             }else{
-                printf("Ship %c hit Planet %c", ship->name, planet->name);
-                float x, y;
-                for (int i =0; i<ship->num_trash; i++){
-                    trash_structure * trash_released = universe_get_trash(universe, i);
-                    chose_position(universe, &x, &y, trash_released->radius, 600, 800);//change
-                    trash_released->x= x;
-                    trash_released->y= y;
-                    trash_released->active=true;
+                printf("Ship %c hit Planet %c\n", ship->name, planet->name);
+                
+                // Liberar trash coletado pela nave
+                for (int j = 0; j < ship->num_trash; j++){
+                    int trash_idx = ship->trash_indexs[j];
+                    trash_structure * trash_released = universe_get_trash(universe, trash_idx);
+                    if (trash_released) {
+                        float new_x, new_y;
+                        chose_position(universe, &new_x, &new_y, trash_released->radius, 
+                                     universe_width, universe_height);
+                        trash_released->x = new_x;
+                        trash_released->y = new_y;
+                        trash_released->active = true;
+                    }
                 }   
+                
                 if (ship->trash_indexs) {
                     free(ship->trash_indexs);
                 }
@@ -473,8 +489,10 @@ void check_colision_ship(universe_data *universe, int index, float *x, float *y,
     }
 
     // Check trash
-    for (int i = 0; i < universe->num_trash; i++) {
+    for (int i = 0; i < universe->max_trash; i++) {
         trash_structure *trash = universe_get_trash(universe, i);
+        if (!trash) continue;  // Pular se trash for NULL ou inativo
+        
         if (do_circles_intersect(*x, *y, ship->radius,
                                     trash->x, trash->y, trash->radius)) {
 
@@ -483,10 +501,12 @@ void check_colision_ship(universe_data *universe, int index, float *x, float *y,
                 ship->trash_indexs = (int*)realloc(ship->trash_indexs, sizeof(int) * ship->num_trash);
                 ship->trash_indexs[ship->num_trash - 1] = i;
                 trash->active = false;
+                universe->num_trash--;  // Decrementar contador de trash ativo
             }
-            break;; 
+            break;
         }
     }
+    
     ship->x = *x;
     ship->y = *y;
 }

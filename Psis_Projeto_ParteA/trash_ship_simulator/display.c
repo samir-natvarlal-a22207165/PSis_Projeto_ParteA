@@ -35,9 +35,9 @@ display_context* display_init(const char *title, int width, int height) {
 
     // Create window with title "GAME"
     ctx->window = SDL_CreateWindow(
-        "GAME",
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
+        title,
+        820,  // Lado direito (assumindo tela de ~1920px de largura)
+        100,  // Um pouco abaixo do topo
         width,
         height,
         SDL_WINDOW_SHOWN
@@ -191,10 +191,10 @@ void display_draw_text(display_context *ctx, const char *text, int x, int y,
 // ===== Game Object Drawing Functions =====
 
 void display_draw_planet(display_context *ctx, float x, float y, char name, 
-                        int index, bool is_recycling, int num_trash) {
+                            bool is_recycling, int num_trash, float radius_planet) {
     if (!ctx || !ctx->renderer) return;
 
-    int radius = 20; // PLANET_RADIUS from universe-data.h
+    int radius = (int) radius_planet; // PLANET_RADIUS from universe-data.h
     int cx = (int)x;
     int cy = (int)y;
 
@@ -212,7 +212,7 @@ void display_draw_planet(display_context *ctx, float x, float y, char name,
 
     // number increments for trash
     // Letter cycles through A-Z(and other caracters)
-    char letter = 'A' + (index % 26);
+    char letter = name;
     int number = num_trash;
     
     char label[4];
@@ -227,10 +227,10 @@ void display_draw_planet(display_context *ctx, float x, float y, char name,
 }
 
 
-void display_draw_trash(display_context *ctx, float x, float y) {
+void display_draw_trash(display_context *ctx, float x, float y, float radius) {
     if (!ctx || !ctx->renderer) return;
 
-    int trash_size = 3; // Small trash pieces
+    int trash_size = (int) radius; // Small trash pieces
     int cx = (int)x;
     int cy = (int)y;
 
@@ -243,10 +243,10 @@ void display_draw_trash(display_context *ctx, float x, float y) {
 
 
 void display_draw_ship(display_context *ctx, float x, float y, char name, 
-                         int num_trash) {
+                         int num_trash, float radius_ship) {
     if (!ctx || !ctx->renderer) return;
 
-    int radius = 20; // PLANET_RADIUS from universe-data.h
+    int radius = (int) radius_ship; // PLANET_RADIUS from universe-data.h
     int cx = (int)x;
     int cy = (int)y;
 
