@@ -435,6 +435,7 @@ void check_colision_ship(universe_data *universe, int index, float *x, float *y,
     }
     
     // Check collision with other ships (skip self)
+    /*
     for (int i = 0; i < universe->num_ships; i++) {
         if (i == index) continue;  // Pular a própria nave
         
@@ -447,11 +448,13 @@ void check_colision_ship(universe_data *universe, int index, float *x, float *y,
             return;
         }
     }
+    */
     
     // Check planets
     for (int i = 0; i < universe->num_planets; i++) {
         planet_structure *planet = universe_get_planet(universe, i);
         if (!planet) continue;  // Pular se planeta for NULL
+        
         
         if (do_circles_intersect(*x, *y, ship->radius,
                                     planet->x, planet->y, CENTER_RADIUS)) {
@@ -472,6 +475,12 @@ void check_colision_ship(universe_data *universe, int index, float *x, float *y,
 
 
             }else{
+                ship->x = *x;
+                ship->y = *y;
+                if (ship->num_trash == 0){
+                    // No trash to release
+                    return;
+                }
                 printf("Ship %c hit Planet %c\n", ship->name, planet->name);
                 
                 // Liberar trash coletado pela nave
@@ -490,7 +499,6 @@ void check_colision_ship(universe_data *universe, int index, float *x, float *y,
                         trash_released->x = new_x;
                         trash_released->y = new_y;
                         universe->num_trash++; // Importante: incrementar o contador de lixo ativo!
-                        
                         printf("Trash %d released back into universe at (%.1f, %.1f)\n", trash_idx, new_x, new_y);
                     }
                 }

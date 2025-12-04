@@ -27,8 +27,12 @@ int main(int argc, char** argv){
         fd = create_client_channel("127.0.0.1");  // localhost para conexão local
     }
 
-    srand(time(NULL));
-    char ch = 'A' + (rand() % 26);
+    char ch;
+    do{
+        printf("what is your character(A..Z)?: ");
+        ch = getchar();
+        ch = toupper(ch);  
+    }while(!isalpha(ch));
 
     send_connection_message(fd, ch);
     char message[100];
